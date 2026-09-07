@@ -134,7 +134,7 @@ export default function Assistant() {
         const newS = await createChatSession();
         sid = newS.id;
         setActiveSessionId(sid);
-        setSessions((prev) => [newS, ...prev]);
+        setSessions((prev) => (prev.some((x) => x.id === newS.id) ? prev : [newS, ...prev]));
       }
 
       let answer;
@@ -145,7 +145,7 @@ export default function Assistant() {
           const newS = await createChatSession();
           sid = newS.id;
           setActiveSessionId(sid);
-          setSessions((prev) => [newS, ...prev]);
+          setSessions((prev) => (prev.some((x) => x.id === newS.id) ? prev : [newS, ...prev]));
           answer = await sendChatMessage(sid, text, language);
         } else {
           throw sendErr;

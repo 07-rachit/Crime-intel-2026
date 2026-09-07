@@ -28,7 +28,7 @@ export default function AuditTrail() {
         setError("Could not load audit logs. Is the API running?");
         setLoading(false);
       });
-  }, [user]);
+  }, [user?.role]);
 
   if (user?.role !== "admin") {
     return (

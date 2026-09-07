@@ -24,7 +24,8 @@ export function NotificationProvider({ children }) {
 
     return () => {
       if (wsRef.current) {
-        wsRef.current.close();
+        if (typeof wsRef.current.close === "function") wsRef.current.close();
+        if (wsRef.current._pollInterval) clearInterval(wsRef.current._pollInterval);
       }
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -48,9 +49,18 @@ export function NotificationProvider({ children }) {
     const token = getToken();
     if (!token) return;
 
+    const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+    // In production deployment (e.g. Vercel), WebSocket port 8000 is not exposed; fall back to 30s polling
+    if (!isLocal && !import.meta.env.VITE_WS_URL) {
+      if (!wsRef.current?._pollInterval) {
+        wsRef.current = { _pollInterval: setInterval(loadInitialData, 30000) };
+      }
+      return;
+    }
+
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const host = window.location.hostname || "localhost";
-    const wsUrl = `${protocol}//${host}:8000/ws/notifications?token=${token}`;
+    const wsUrl = import.meta.env.VITE_WS_URL || `${protocol}//${host}:8000/ws/notifications?token=${token}`;
 
     try {
       const ws = new WebSocket(wsUrl);
