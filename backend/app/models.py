@@ -888,10 +888,12 @@ class CitizenReport(Base):
     created_case_id = Column(String, ForeignKey("cases.id"), nullable=True)
     reviewed_by_user_id = Column(String, ForeignKey("users.id"), nullable=True)
     reviewed_at = Column(DateTime, nullable=True)
+    assigned_officer_id = Column(String, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     created_case = relationship("Case", foreign_keys=[created_case_id])
     reviewed_by = relationship("User", foreign_keys=[reviewed_by_user_id])
+    assigned_officer = relationship("User", foreign_keys=[assigned_officer_id])
     evidence_items = relationship("ReportEvidence", back_populates="report", cascade="all, delete-orphan")
 
 

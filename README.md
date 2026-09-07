@@ -164,15 +164,15 @@ CrimeIntel enables multi-investigator coordination across case files:
 ## 🚀 Deployment & Vercel Serverless Configuration
 
 The platform is live and deployed serverlessly on **Vercel** (`vercel.json`):
-- 🌐 **Vercel Live Application**: [https://datathon-2026-mu.vercel.app](https://datathon-2026-mu.vercel.app)
-- 🔑 **Vercel Login Page**: [https://datathon-2026-mu.vercel.app/login](https://datathon-2026-mu.vercel.app/login)
-- 📚 **Vercel OpenAPI Documentation**: [https://datathon-2026-mu.vercel.app/api/docs](https://datathon-2026-mu.vercel.app/api/docs)
+- 🌐 **Vercel Live Application**: [https://crime-intel.vercel.app](https://crime-intel.vercel.app)
+- 🔑 **Vercel Login Page**: [https://crime-intel.vercel.app/login](https://crime-intel.vercel.app/login)
+- 📚 **Vercel OpenAPI Documentation**: [https://crime-intel.vercel.app/api/docs](https://crime-intel.vercel.app/api/docs)
 - ⚡ **Vercel Serverless API Base**: `/api` (Production Serverless Python Backend)
 
 ### 1. Vercel Serverless Production Links
-- **Live Application URL**: [https://datathon-2026-mu.vercel.app](https://datathon-2026-mu.vercel.app)
-- **Live Login Portal**: [https://datathon-2026-mu.vercel.app/login](https://datathon-2026-mu.vercel.app/login)
-- **Live OpenAPI Documentation**: [https://datathon-2026-mu.vercel.app/api/docs](https://datathon-2026-mu.vercel.app/api/docs)
+- **Live Application URL**: [https://crime-intel.vercel.app](https://crime-intel.vercel.app)
+- **Live Login Portal**: [https://crime-intel.vercel.app/login](https://crime-intel.vercel.app/login)
+- **Live OpenAPI Documentation**: [https://crime-intel.vercel.app/api/docs](https://crime-intel.vercel.app/api/docs)
 - **Default RBAC Credentials**:
   - Admin: `admin@crimeintel.local` / `Admin@123`
   - Analyst: `analyst@crimeintel.local` / `Analyst@123`

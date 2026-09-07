@@ -54,7 +54,8 @@ def list_career_plans(
     deadline_before: Optional[datetime] = Query(None, description="Filter deadline on or before date"),
     deadline_after: Optional[datetime] = Query(None, description="Filter deadline on or after date"),
     user_id: Optional[str] = Query(None, description="Filter by plan owner user ID"),
-    sort_by: str = Query("newest", description="Sort order: newest, oldest, deadline, alphabetical"),
+    scope: Optional[str] = Query("all", description="Scope: 'all' for department learning catalog, 'mine' for own plans"),
+    sort_by: str = Query("newest", description="Sort order: newest, oldest, deadline, alphabetical, deadline_asc, deadline_desc"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(12, ge=1, le=100, description="Items per page"),
     db: Session = Depends(get_db),
@@ -64,8 +65,8 @@ def list_career_plans(
 
     query = db.query(models.CareerPlan).options(joinedload(models.CareerPlan.owner))
 
-    # RBAC Scoping: Non-admin/analyst users see their own plans unless explicit user_id requested with permissions
-    if current_user.role not in (models.RoleEnum.admin, models.RoleEnum.analyst):
+    # Scope filtering: 'mine' shows current user's plans, 'all' browses department catalog
+    if scope == "mine":
         query = query.filter(models.CareerPlan.user_id == current_user.id)
     elif user_id:
         query = query.filter(models.CareerPlan.user_id == user_id)
@@ -115,8 +116,10 @@ def list_career_plans(
     sort_clean = sort_by.lower().strip()
     if sort_clean == "oldest":
         query = query.order_by(models.CareerPlan.created_at.asc())
-    elif sort_clean == "deadline":
+    elif sort_clean in ("deadline", "deadline_asc"):
         query = query.order_by(models.CareerPlan.deadline.asc().nullslast())
+    elif sort_clean == "deadline_desc":
+        query = query.order_by(models.CareerPlan.deadline.desc().nullslast())
     elif sort_clean == "alphabetical":
         query = query.order_by(models.CareerPlan.title.asc())
     else:  # newest
@@ -152,9 +155,6 @@ def get_career_plan(
     plan = db.query(models.CareerPlan).options(joinedload(models.CareerPlan.owner)).filter(models.CareerPlan.id == plan_id).first()
     if not plan:
         raise ResourceNotFoundError(f"Career plan with ID '{plan_id}' was not found")
-
-    if current_user.role not in (models.RoleEnum.admin, models.RoleEnum.analyst) and plan.user_id != current_user.id:
-        raise AuthorizationError("You do not have permission to view this career plan")
 
     return _to_plan_out(plan)
 

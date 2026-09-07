@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { SkeletonTableRow } from "../components/Skeleton.jsx";
 import {
   createWorkflow,
   fetchWorkflows,
@@ -315,14 +317,15 @@ export default function Workflows() {
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
                   {loading ? (
-                    <tr>
-                      <td colSpan="7" className="py-8 text-center text-slate-500">
-                        Loading workflow execution telemetry...
-                      </td>
-                    </tr>
+                    <>
+                      <SkeletonTableRow cols={7} />
+                      <SkeletonTableRow cols={7} />
+                      <SkeletonTableRow cols={7} />
+                      <SkeletonTableRow cols={7} />
+                    </>
                   ) : workflows.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="py-8 text-center text-slate-500">
+                      <td colSpan="7" className="py-8 text-center text-slate-500 font-mono text-xs">
                         No workflows found. Click "Plan New Workflow" to initiate one.
                       </td>
                     </tr>
@@ -343,12 +346,15 @@ export default function Workflows() {
                         <td className="py-3 px-4">{getStatusBadge(w.status)}</td>
 
                         <td className="py-3 px-4 w-40">
-                          <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+                          <div className="flex items-center justify-between text-[10px] text-slate-400 mb-1 font-mono">
                             <span>Step {w.current_step_index} / {w.total_steps}</span>
-                            <span>{w.progress_pct}%</span>
+                            <span className="text-cyan-400 font-semibold">{w.progress_pct}%</span>
                           </div>
-                          <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
-                            <div className="bg-cyan-500 h-full transition-all duration-300" style={{ width: `${w.progress_pct}%` }} />
+                          <div className="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800/60 p-[1px]">
+                            <div
+                              className="bg-gradient-to-r from-cyan-500 to-teal-400 h-full rounded-full transition-all duration-500"
+                              style={{ width: `${w.progress_pct}%` }}
+                            />
                           </div>
                         </td>
 
@@ -457,107 +463,123 @@ export default function Workflows() {
       )}
 
       {/* Plan New Workflow Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-950 border border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-white">Plan Multi-Step Workflow</h3>
+      <AnimatePresence>
+        {showCreateModal && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-slate-950 border border-slate-800 rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl"
+            >
+              <h3 className="text-base font-bold text-white">Plan Multi-Step Workflow</h3>
 
-            <form onSubmit={handleCreate} className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-400 block mb-1">Workflow Type</label>
-                <select
-                  value={newType}
-                  onChange={(e) => setNewType(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white"
-                >
-                  <option value="case_investigation">Case Investigation (4 Steps)</option>
-                  <option value="financial_seizure">Financial Account Seizure (4 Steps - CRITICAL)</option>
-                  <option value="suspect_warrant">Judicial Arrest Warrant (4 Steps - CRITICAL)</option>
-                </select>
-              </div>
+              <form onSubmit={handleCreate} className="space-y-3 text-xs">
+                <div>
+                  <label className="text-slate-400 block mb-1">Workflow Type</label>
+                  <select
+                    value={newType}
+                    onChange={(e) => setNewType(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                  >
+                    <option value="case_investigation">Case Investigation (4 Steps)</option>
+                    <option value="financial_seizure">Financial Account Seizure (4 Steps - CRITICAL)</option>
+                    <option value="suspect_warrant">Judicial Arrest Warrant (4 Steps - CRITICAL)</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="text-slate-400 block mb-1">Workflow Title</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Audit Syndicate Transactions & Freeze Account"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white"
-                />
-              </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Workflow Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Audit Syndicate Transactions & Freeze Account"
+                    value={newTitle}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                  />
+                </div>
 
-              <div>
-                <label className="text-slate-400 block mb-1">Description</label>
-                <textarea
-                  rows={3}
-                  placeholder="Context and investigative scope..."
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white"
-                />
-              </div>
+                <div>
+                  <label className="text-slate-400 block mb-1">Description</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Context and investigative scope..."
+                    value={newDesc}
+                    onChange={(e) => setNewDesc(e.target.value)}
+                    className="w-full bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-white focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                  />
+                </div>
 
-              <div className="flex items-center justify-end gap-3 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg"
-                >
-                  Generate Plan
-                </button>
-              </div>
-            </form>
+                <div className="flex items-center justify-end gap-3 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold rounded-lg transition shadow-md shadow-cyan-500/20"
+                  >
+                    Generate Plan
+                  </button>
+                </div>
+              </form>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Inspect Workflow Modal */}
-      {selectedWf && wfDetail && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-950 border border-slate-800 rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div>
-                <h3 className="text-base font-bold text-white">{wfDetail.title}</h3>
-                <div className="text-xs text-slate-400 mt-0.5">{wfDetail.workflow_type}</div>
-              </div>
-              <button onClick={() => { setSelectedWf(null); setWfDetail(null); }} className="text-slate-400 hover:text-white">
-                <CrossIcon />
-              </button>
-            </div>
-
-            {/* Step-by-Step Timeline */}
-            <div className="space-y-3">
-              <div className="text-xs font-semibold text-slate-300">Execution Step Plan</div>
-              {wfDetail.steps?.map((step) => (
-                <div key={step.id} className="p-3.5 bg-slate-900 border border-slate-800 rounded-lg space-y-1.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-white">
-                      Step #{step.step_number}: {step.step_name}
-                    </span>
-                    <div className="flex items-center gap-2">
-                      {getRiskBadge(step.risk_level)}
-                      {getStatusBadge(step.status)}
-                    </div>
-                  </div>
-                  {step.output_result && (
-                    <pre className="text-[11px] bg-slate-950 p-2 rounded text-cyan-300 font-mono overflow-x-auto">
-                      {JSON.stringify(step.output_result, null, 2)}
-                    </pre>
-                  )}
+      <AnimatePresence>
+        {selectedWf && wfDetail && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-slate-950 border border-slate-800 rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div>
+                  <h3 className="text-base font-bold text-white">{wfDetail.title}</h3>
+                  <div className="text-xs text-slate-400 mt-0.5">{wfDetail.workflow_type}</div>
                 </div>
-              ))}
-            </div>
+                <button onClick={() => { setSelectedWf(null); setWfDetail(null); }} className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition">
+                  <CrossIcon />
+                </button>
+              </div>
+
+              {/* Step-by-Step Timeline */}
+              <div className="space-y-3">
+                <div className="text-xs font-semibold text-slate-300">Execution Step Plan</div>
+                {wfDetail.steps?.map((step) => (
+                  <div key={step.id} className="p-3.5 bg-slate-900 border border-slate-800 rounded-lg space-y-1.5 hover:border-slate-700 transition">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-white">
+                        Step #{step.step_number}: {step.step_name}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {getRiskBadge(step.risk_level)}
+                        {getStatusBadge(step.status)}
+                      </div>
+                    </div>
+                    {step.output_result && (
+                      <pre className="text-[11px] bg-slate-950 p-2 rounded text-cyan-300 font-mono overflow-x-auto border border-slate-800/60">
+                        {JSON.stringify(step.output_result, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 }

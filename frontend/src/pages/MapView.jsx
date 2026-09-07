@@ -1,8 +1,22 @@
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import api from "../lib/api.js";
+import {
+  MapPin,
+  Search,
+  AlertTriangle,
+  Crosshair,
+  ArrowRight,
+  Folder,
+  X,
+  Layers,
+  Tag,
+  Building2,
+  Map as MapIcon
+} from "lucide-react";
 
 const SEVERITY_COLOR = {
   low: "#3FD6C1",
@@ -141,12 +155,12 @@ export default function MapView() {
           </div>
           <div style="font-size:13px; font-weight:700; margin:2px 0 6px 0; color:#1E293B;">${c.title}</div>
           <div style="font-size:11px; color:#64748B; margin-bottom:10px;">
-            🏢 <b>${c.district}</b> &middot; 🏷️ ${c.crime_type} &middot; 📌 <span style="text-transform:capitalize;">${c.status ? c.status.replace("_", " ") : "N/A"}</span>
+            <b>${c.district}</b> &middot; ${c.crime_type} &middot; <span style="text-transform:capitalize;">${c.status ? c.status.replace("_", " ") : "N/A"}</span>
           </div>
           <div style="font-size:10px; font-family:monospace; color:#94A3B8; margin-bottom:10px;">
-            📍 ${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}
+            Coords: ${c.latitude.toFixed(4)}, ${c.longitude.toFixed(4)}
           </div>
-          <a href="/cases/${c.id}" style="display:block; text-align:center; padding:6px 10px; background:#F0A202; color:#0B0F17; font-size:11px; font-weight:700; border-radius:4px; text-decoration:none; box-shadow:0 1px 3px rgba(0,0,0,0.2);">📂 OPEN CASE FILE &rarr;</a>
+          <a href="/cases/${c.id}" style="display:block; text-align:center; padding:6px 10px; background:#F0A202; color:#0B0F17; font-size:11px; font-weight:700; border-radius:4px; text-decoration:none; box-shadow:0 1px 3px rgba(0,0,0,0.2);">OPEN CASE DOSSIER &rarr;</a>
         </div>
       `;
       marker.bindPopup(popupHtml);
@@ -226,7 +240,8 @@ export default function MapView() {
               className="px-3 py-1.5 bg-panel2 hover:bg-line border border-line text-ink rounded text-xs font-mono transition flex items-center gap-1.5"
               title="Reset map view to show all visible pins"
             >
-              🔍 Fit All Hotspots
+              <Crosshair className="w-3.5 h-3.5 text-teal" />
+              <span>Fit All Hotspots</span>
             </button>
 
             {/* Toggle Sidebar Button */}
@@ -238,7 +253,8 @@ export default function MapView() {
                   : "bg-panel2 text-muted border-line hover:text-ink"
               }`}
             >
-              {showSidebar ? "📂 Hide Hotspot Panel" : "📋 Show Hotspot Panel"} ({filteredCases.length})
+              <Layers className="w-3.5 h-3.5" />
+              <span>{showSidebar ? "Hide Hotspot Panel" : "Show Hotspot Panel"}</span> ({filteredCases.length})
             </button>
           </div>
         </div>
@@ -256,13 +272,13 @@ export default function MapView() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-panel2 border border-line rounded px-3 py-1.5 text-ink text-xs focus:outline-none focus:ring-1 focus:ring-teal pl-8"
               />
-              <span className="absolute left-2.5 top-1.5 text-muted text-xs">🔍</span>
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-muted" />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery("")}
-                  className="absolute right-2.5 top-1.5 text-muted hover:text-ink text-xs"
+                  className="absolute right-2.5 top-1.5 text-muted hover:text-ink text-xs p-0.5"
                 >
-                  ✕
+                  <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -297,6 +313,7 @@ export default function MapView() {
               onChange={(e) => setStatus(e.target.value)}
               className="bg-panel2 border border-line rounded px-2.5 py-1.5 text-ink text-xs focus:outline-none focus:ring-1 focus:ring-teal"
             >
+              <option value="">All Statuses</option>
               {STATUS_OPTIONS.map((s) => (
                 <option key={s} value={s}>{s ? s.replace("_", " ") : "All Statuses"}</option>
               ))}
@@ -306,9 +323,10 @@ export default function MapView() {
             {(district || status || crimeType || severity || searchQuery) && (
               <button
                 onClick={resetFilters}
-                className="text-xs font-mono text-crit hover:underline px-2 py-1 bg-crit/10 border border-crit/30 rounded"
+                className="text-xs font-mono text-crit hover:underline px-2.5 py-1 bg-crit/10 border border-crit/30 rounded flex items-center gap-1"
               >
-                Clear Filters ✕
+                <span>Clear Filters</span>
+                <X className="w-3 h-3" />
               </button>
             )}
           </div>
@@ -356,13 +374,14 @@ export default function MapView() {
               <button
                 key={d}
                 onClick={() => setDistrict(district === d ? "" : d)}
-                className={`px-2.5 py-0.5 rounded-full font-mono text-[11px] whitespace-nowrap border transition ${
+                className={`px-2.5 py-0.5 rounded-full font-mono text-[11px] whitespace-nowrap border transition flex items-center gap-1 ${
                   district === d
                     ? "bg-teal/20 text-teal border-teal/50 font-semibold"
                     : "bg-panel2 text-muted border-line hover:border-teal/30 hover:text-ink"
                 }`}
               >
-                📍 {d}
+                <MapPin className="w-2.5 h-2.5" />
+                <span>{d}</span>
               </button>
             ))}
           </div>
@@ -370,8 +389,9 @@ export default function MapView() {
       </div>
 
       {error && (
-        <p className="text-crit text-sm font-mono border border-crit/40 bg-crit/10 rounded px-4 py-2.5 mb-3">
-          ⚠️ {error}
+        <p className="text-crit text-sm font-mono border border-crit/40 bg-crit/10 rounded px-4 py-2.5 mb-3 flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-crit" />
+          <span>{error}</span>
         </p>
       )}
 
@@ -383,119 +403,135 @@ export default function MapView() {
 
           {/* Map Overlay Badge */}
           <div className="absolute bottom-3 left-3 z-[1000] bg-base/90 backdrop-blur border border-line rounded px-3 py-1.5 text-xs font-mono text-muted flex items-center gap-2 shadow-lg">
-            <span>📍 Active Pins: <strong className="text-teal">{filteredCases.length}</strong></span>
+            <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-teal" /> Active Pins: <strong className="text-teal">{filteredCases.length}</strong></span>
             <span>&middot;</span>
-            <Link to="/cases" className="text-amber hover:underline">View All Cases &rarr;</Link>
+            <Link to="/cases" className="text-amber hover:underline flex items-center gap-1">
+              <span>View All Cases</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
           </div>
         </div>
 
         {/* Hotspot Sidebar List */}
-        {showSidebar && (
-          <div className="w-80 sm:w-96 bg-panel border-l border-line flex flex-col h-full z-[1001] shadow-2xl transition-all">
-            {/* Sidebar Header */}
-            <div className="p-3 border-b border-line bg-panel2 flex items-center justify-between">
-              <div>
-                <h3 className="font-display text-lg text-ink">Filtered Hotspots</h3>
-                <p className="text-[11px] font-mono text-muted">
-                  Click any hotspot to zoom directly to location
-                </p>
-              </div>
-              <span className="font-mono text-xs text-teal bg-teal/10 px-2 py-0.5 rounded border border-teal/20">
-                {filteredCases.length} locations
-              </span>
-            </div>
-
-            {/* Scrollable Hotspot Cards List */}
-            <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5 custom-scrollbar">
-              {filteredCases.length === 0 ? (
-                <div className="p-8 text-center text-muted font-mono text-xs">
-                  <p className="text-2xl mb-2">🗺️</p>
-                  No hotspot locations match the selected filters.
-                  <button
-                    onClick={resetFilters}
-                    className="block mx-auto mt-3 text-teal underline"
-                  >
-                    Reset all filters
-                  </button>
+        <AnimatePresence>
+          {showSidebar && (
+            <motion.div
+              initial={{ x: 380, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 380, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="w-80 sm:w-96 bg-panel border-l border-line flex flex-col h-full z-[1001] shadow-2xl transition-all"
+            >
+              {/* Sidebar Header */}
+              <div className="p-3 border-b border-line bg-panel2 flex items-center justify-between">
+                <div>
+                  <h3 className="font-display text-lg text-ink">Filtered Hotspots</h3>
+                  <p className="text-[11px] font-mono text-muted">
+                    Click any hotspot to zoom directly to location
+                  </p>
                 </div>
-              ) : (
-                filteredCases.map((c) => {
-                  const isSelected = c.id === selectedCaseId;
-                  const color = SEVERITY_COLOR[c.severity] || "#7C8AA3";
+                <span className="font-mono text-xs text-teal bg-teal/10 px-2 py-0.5 rounded border border-teal/20">
+                  {filteredCases.length} locations
+                </span>
+              </div>
 
-                  return (
-                    <div
-                      key={c.id}
-                      onClick={() => handleFlyToCase(c)}
-                      className={`p-3 rounded-md border transition-all cursor-pointer group ${
-                        isSelected
-                          ? "bg-panel2 border-teal shadow-md ring-1 ring-teal/50"
-                          : "bg-panel2/50 border-line hover:border-line hover:bg-panel2"
-                      }`}
+              {/* Scrollable Hotspot Cards List */}
+              <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5 custom-scrollbar">
+                {filteredCases.length === 0 ? (
+                  <div className="p-8 text-center text-muted font-mono text-xs">
+                    <MapIcon className="w-8 h-8 text-muted mx-auto mb-2 opacity-40" />
+                    No hotspot locations match the selected filters.
+                    <button
+                      onClick={resetFilters}
+                      className="block mx-auto mt-3 text-teal underline"
                     >
-                      {/* Top row: Case ID & Severity Badge */}
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="font-mono text-xs font-bold text-teal tracking-wide">
-                          {c.case_id}
-                        </span>
-                        <span
-                          className="text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded"
-                          style={{
-                            backgroundColor: `${color}22`,
-                            color: color,
-                            border: `1px solid ${color}44`,
-                          }}
-                        >
-                          {c.severity}
-                        </span>
-                      </div>
+                      Reset all filters
+                    </button>
+                  </div>
+                ) : (
+                  filteredCases.map((c) => {
+                    const isSelected = c.id === selectedCaseId;
+                    const color = SEVERITY_COLOR[c.severity] || "#7C8AA3";
 
-                      {/* Title */}
-                      <h4 className="text-sm font-semibold text-ink group-hover:text-amber transition line-clamp-1 mb-1">
-                        {c.title}
-                      </h4>
-
-                      {/* Details row */}
-                      <div className="text-[11px] text-muted flex items-center justify-between gap-1 mb-2">
-                        <span>🏢 {c.district}</span>
-                        <span>&middot;</span>
-                        <span className="truncate">🏷️ {c.crime_type}</span>
-                        <span>&middot;</span>
-                        <span className="capitalize">{c.status ? c.status.replace("_", " ") : "Open"}</span>
-                      </div>
-
-                      {/* Bottom action row: Coordinates & Fly To button */}
-                      <div className="pt-2 border-t border-line/50 flex items-center justify-between text-[10px] font-mono">
-                        <span className="text-muted flex items-center gap-1">
-                          📍 {c.latitude?.toFixed(4)}, {c.longitude?.toFixed(4)}
-                        </span>
-
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleFlyToCase(c);
+                    return (
+                      <motion.div
+                        key={c.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={() => handleFlyToCase(c)}
+                        className={`p-3 rounded-lg border transition-all duration-200 cursor-pointer group ${
+                          isSelected
+                            ? "bg-panel2 border-teal shadow-[0_0_15px_rgba(20,184,166,0.2)] ring-1 ring-teal/50"
+                            : "bg-panel2/50 border-line hover:border-teal/40 hover:bg-panel2"
+                        }`}
+                      >
+                        {/* Top row: Case ID & Severity Badge */}
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-mono text-xs font-bold text-teal tracking-wide">
+                            {c.case_id}
+                          </span>
+                          <span
+                            className="text-[10px] font-mono uppercase font-bold px-2 py-0.5 rounded"
+                            style={{
+                              backgroundColor: `${color}22`,
+                              color: color,
+                              border: `1px solid ${color}44`,
                             }}
-                            className="text-teal hover:text-ink font-bold flex items-center gap-1 bg-teal/10 hover:bg-teal/20 px-2 py-0.5 rounded transition"
                           >
-                            <span>🎯 Fly To</span>
-                          </button>
-                          <Link
-                            to={`/cases/${c.id}`}
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-amber hover:underline font-bold"
-                          >
-                            Open ➔
-                          </Link>
+                            {c.severity}
+                          </span>
                         </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        )}
+
+                        {/* Title */}
+                        <h4 className="text-sm font-semibold text-ink group-hover:text-amber transition line-clamp-1 mb-1">
+                          {c.title}
+                        </h4>
+
+                        {/* Details row */}
+                        <div className="text-[11px] text-muted flex items-center justify-between gap-1 mb-2">
+                          <span className="flex items-center gap-1"><Building2 className="w-3 h-3 text-slate-400" /> {c.district}</span>
+                          <span>&middot;</span>
+                          <span className="truncate flex items-center gap-1"><Tag className="w-3 h-3 text-teal" /> {c.crime_type}</span>
+                          <span>&middot;</span>
+                          <span className="capitalize">{c.status ? c.status.replace("_", " ") : "Open"}</span>
+                        </div>
+
+                        {/* Bottom action row: Coordinates & Fly To button */}
+                        <div className="pt-2 border-t border-line/50 flex items-center justify-between text-[10px] font-mono">
+                          <span className="text-muted flex items-center gap-1">
+                            <MapPin className="w-3 h-3 text-cyan" /> {c.latitude?.toFixed(4)}, {c.longitude?.toFixed(4)}
+                          </span>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFlyToCase(c);
+                              }}
+                              className="text-teal hover:text-ink font-bold flex items-center gap-1 bg-teal/10 hover:bg-teal/20 px-2 py-0.5 rounded transition"
+                            >
+                              <Crosshair className="w-3 h-3" />
+                              <span>Fly To</span>
+                            </button>
+                            <Link
+                              to={`/cases/${c.id}`}
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-amber hover:underline font-bold flex items-center gap-0.5"
+                            >
+                              <span>Open</span>
+                              <ArrowRight className="w-2.5 h-2.5" />
+                            </Link>
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

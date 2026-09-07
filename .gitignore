@@ -52,3 +52,5 @@ backend/alembic/versions/*.pyc
 *.pid
 backend/uploads/
 backend/*.log
+.playwright-mcp/
+test.json

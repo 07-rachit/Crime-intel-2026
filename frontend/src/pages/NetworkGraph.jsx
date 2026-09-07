@@ -10,6 +10,20 @@ import {
   forceCollide,
 } from "d3-force-3d";
 import { fetchNetworkGraph, fetchNetworkGroups } from "../lib/api.js";
+import { AnimatePresence, motion } from "../components/motion.jsx";
+import {
+  Search,
+  RotateCw,
+  Crosshair,
+  AlertTriangle,
+  Users,
+  Folder,
+  Phone,
+  Building,
+  ArrowRight,
+  User,
+  CreditCard
+} from "lucide-react";
 
 /* ─── Color Palette ────────────────────────────────────────────────────────── */
 const COL = {
@@ -549,9 +563,9 @@ export default function NetworkGraph() {
                 placeholder="Search suspect, case, account..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-panel2 border border-line rounded px-3 py-1.5 text-ink text-xs focus:outline-none focus:ring-1 focus:ring-teal pl-7 w-full"
+                className="bg-panel2 border border-line rounded px-3 py-1.5 text-ink text-xs focus:outline-none focus:ring-1 focus:ring-teal pl-8 w-full"
               />
-              <span className="absolute left-2.5 top-1.5 text-muted text-xs">🔍</span>
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2 text-muted" />
               {searchQuery && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-panel border border-line rounded shadow-2xl z-50 max-h-48 overflow-y-auto">
                   {searchResults.length === 0 ? (
@@ -603,23 +617,25 @@ export default function NetworkGraph() {
             {/* Auto-Rotate Toggle */}
             <button
               onClick={() => setAutoRotate(!autoRotate)}
-              className={`px-2.5 py-1.5 rounded text-xs font-mono border transition ${
+              className={`px-2.5 py-1.5 rounded text-xs font-mono border transition flex items-center gap-1.5 ${
                 autoRotate
                   ? "bg-teal/20 text-teal border-teal/40"
                   : "bg-panel2 text-muted border-line hover:text-ink"
               }`}
               title="Toggle automatic 3D rotation"
             >
-              🔄 Orbit: {autoRotate ? "ON" : "OFF"}
+              <RotateCw className={`w-3.5 h-3.5 ${autoRotate ? "animate-spin text-teal" : ""}`} />
+              <span>Orbit: {autoRotate ? "ON" : "OFF"}</span>
             </button>
 
             {/* Reset View */}
             <button
               onClick={handleResetCamera}
-              className="px-2.5 py-1.5 bg-panel2 hover:bg-line border border-line text-ink rounded text-xs font-mono transition"
+              className="px-2.5 py-1.5 bg-panel2 hover:bg-line border border-line text-ink rounded text-xs font-mono transition flex items-center gap-1.5"
               title="Reset 3D camera to home position"
             >
-              🎯 Reset View
+              <Crosshair className="w-3.5 h-3.5 text-teal" />
+              <span>Reset View</span>
             </button>
           </div>
         </div>
@@ -643,8 +659,9 @@ export default function NetworkGraph() {
         {/* 3D Canvas Container */}
         <div className="flex-1 relative bg-[#0B0F17]">
           {error && (
-            <div className="absolute top-4 left-4 z-10 text-crit text-xs font-mono bg-crit/10 border border-crit/40 px-3 py-2 rounded">
-              ⚠️ {error}
+            <div className="absolute top-4 left-4 z-10 text-crit text-xs font-mono bg-crit/10 border border-crit/40 px-3 py-2 rounded flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-crit" />
+              <span>{error}</span>
             </div>
           )}
           {loading && (
@@ -711,12 +728,13 @@ export default function NetworkGraph() {
                         Risk: {g.group_risk_score}
                       </span>
                     </div>
-                    <p className="text-muted text-[11px] mb-1">
-                      👥 Members: {g.member_count} &middot; 📂 Cases: {g.linked_cases}
+                    <p className="text-muted text-[11px] mb-1 flex items-center gap-3">
+                      <span className="flex items-center gap-1"><Users className="w-3 h-3 text-cyan" /> {g.member_count} Members</span>
+                      <span className="flex items-center gap-1"><Folder className="w-3 h-3 text-amber" /> {g.linked_cases} Cases</span>
                     </p>
                     <div className="text-[10px] text-teal font-bold flex items-center justify-between pt-1 border-t border-line/40">
-                      <span>{isSelected ? "🎯 Centroid Focused" : "Click to zoom cluster"}</span>
-                      <span>&rarr;</span>
+                      <span>{isSelected ? "Centroid Focused" : "Click to zoom cluster"}</span>
+                      <ArrowRight className="w-3 h-3" />
                     </div>
                   </div>
                 );
@@ -734,13 +752,18 @@ export default function NetworkGraph() {
                 onClick={() => setSelected(null)}
                 className="text-xs text-muted hover:text-ink font-mono"
               >
-                Clear ✕
+                Clear
               </button>
             )}
           </h4>
 
           {selected ? (
-            <div className="bg-panel2 border border-line rounded-lg p-3 text-xs font-mono space-y-2.5">
+            <motion.div
+              key="node-inspector"
+              initial={{ opacity: 0, x: 12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+              className="bg-panel2 border border-line rounded-lg p-3 text-xs font-mono space-y-2.5">
               <div className="flex items-center justify-between border-b border-line/60 pb-2">
                 <span className="text-teal font-bold text-sm tracking-wide">{selected.label}</span>
                 <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded bg-teal/10 text-teal border border-teal/30">
@@ -755,20 +778,20 @@ export default function NetworkGraph() {
               )}
 
               {selected.phone && (
-                <p className="text-crit font-semibold flex items-center gap-1">
-                  📞 Phone: {selected.phone}
+                <p className="text-crit font-semibold flex items-center gap-1.5">
+                  <Phone className="w-3.5 h-3.5" /> Phone: {selected.phone}
                 </p>
               )}
 
               {selected.severity && (
-                <p className="text-amber font-semibold uppercase flex items-center gap-1">
-                  ⚠️ Severity: {selected.severity}
+                <p className="text-amber font-semibold uppercase flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5" /> Severity: {selected.severity}
                 </p>
               )}
 
               {selected.district && (
-                <p className="text-muted flex items-center gap-1">
-                  🏢 District: {selected.district}
+                <p className="text-muted flex items-center gap-1.5">
+                  <Building className="w-3.5 h-3.5" /> District: {selected.district}
                 </p>
               )}
 
@@ -777,34 +800,40 @@ export default function NetworkGraph() {
                 {selected.type === "case" && selected.ref_id && (
                   <button
                     onClick={() => navigate(`/cases/${selected.ref_id}`)}
-                    className="w-full text-center py-1.5 rounded bg-amber text-base font-bold text-xs hover:bg-amber/90 transition"
+                    className="w-full text-center py-1.5 rounded bg-amber text-base font-bold text-xs hover:bg-amber/90 transition flex items-center justify-center gap-1.5"
                   >
-                    📂 Open Case File &rarr;
+                    <Folder className="w-3.5 h-3.5" />
+                    <span>Open Case File</span>
+                    <ArrowRight className="w-3 h-3" />
                   </button>
                 )}
 
                 {selected.type === "person" && (
                   <button
                     onClick={() => navigate(`/offenders`)}
-                    className="w-full text-center py-1.5 rounded bg-panel border border-teal/40 text-teal font-semibold text-xs hover:bg-teal/10 transition"
+                    className="w-full text-center py-1.5 rounded bg-panel border border-teal/40 text-teal font-semibold text-xs hover:bg-teal/10 transition flex items-center justify-center gap-1.5"
                   >
-                    👤 View Offender Directory &rarr;
+                    <User className="w-3.5 h-3.5" />
+                    <span>View Offender Directory</span>
+                    <ArrowRight className="w-3 h-3" />
                   </button>
                 )}
 
                 {selected.type === "account" && selected.ref_id && (
                   <button
                     onClick={() => navigate(`/cases`)}
-                    className="w-full text-center py-1.5 rounded bg-panel border border-violet/40 text-violet font-semibold text-xs hover:bg-violet/10 transition"
+                    className="w-full text-center py-1.5 rounded bg-panel border border-violet/40 text-violet font-semibold text-xs hover:bg-violet/10 transition flex items-center justify-center gap-1.5"
                   >
-                    💳 Financial Trail View &rarr;
+                    <CreditCard className="w-3.5 h-3.5" />
+                    <span>Financial Trail View</span>
+                    <ArrowRight className="w-3 h-3" />
                   </button>
                 )}
               </div>
-            </div>
+            </motion.div>
           ) : (
             <div className="p-4 border border-line/60 bg-panel2/30 rounded-lg text-center text-muted font-mono text-xs">
-              👈 Click any node in the 3D graph or search above to inspect full details.
+              Click any node in the 3D graph or search above to inspect full details.
             </div>
           )}
         </div>

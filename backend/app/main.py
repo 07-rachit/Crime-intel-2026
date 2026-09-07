@@ -48,6 +48,12 @@ def migrate_db_schema():
                 if "previous_investigation_label" not in columns:
                     conn.execute(text("ALTER TABLE cases ADD COLUMN previous_investigation_label VARCHAR"))
                 conn.commit()
+        if "citizen_reports" in inspector.get_table_names():
+            cr_cols = [c["name"] for c in inspector.get_columns("citizen_reports")]
+            with engine.connect() as conn:
+                if "assigned_officer_id" not in cr_cols:
+                    conn.execute(text("ALTER TABLE citizen_reports ADD COLUMN assigned_officer_id VARCHAR"))
+                conn.commit()
     except Exception as mig_err:
         print(f"--> DB Schema Migration Notice: {mig_err}")
 
@@ -111,6 +117,66 @@ def ensure_db_initialized():
                     seed_sample_reviewed_case(db)
                 except Exception as sc_err:
                     print(f"--> Auto-seed sample case notice: {sc_err}")
+
+            if db.query(models.CitizenReport).first() is None:
+                import uuid
+                from datetime import datetime, timedelta
+                r1 = models.CitizenReport(
+                    id="rep-demo-001",
+                    tracking_id="TRK-2026-00010",
+                    crime_type="Cyber Fraud / Phishing",
+                    incident_date=datetime.utcnow() - timedelta(days=1),
+                    location="Commercial Street Kiosk #4, Bengaluru",
+                    latitude=12.9716,
+                    longitude=77.5946,
+                    description="Victim duped into transferring Rs 3.5 Lakhs via bogus OTP verification portal claiming to be electricity department refund.",
+                    reporter_name="Rohan Mehta",
+                    reporter_phone="+91-9876543210",
+                    reporter_email="rohan.m@example.com",
+                    status="pending",
+                    ai_classification="Cyber Fraud / Phishing",
+                    ai_priority="high",
+                    ai_summary="AI Analysis: Incident categorized under 'Cyber Fraud / Phishing'. Assigned priority: HIGH. Financial extortion through banking Trojan / OTP spoofing.",
+                    assigned_officer_id="user-investigator-demo-001",
+                    created_at=datetime.utcnow() - timedelta(days=1),
+                )
+                r2 = models.CitizenReport(
+                    id="rep-demo-002",
+                    tracking_id="TRK-2026-00011",
+                    crime_type="Armed Robbery / Snatching",
+                    incident_date=datetime.utcnow() - timedelta(hours=8),
+                    location="Ring Road Junction 14, Indiranagar",
+                    latitude=12.9784,
+                    longitude=77.6408,
+                    description="Two motorcycle-borne masked assailants snatched gold necklace and threatened victim with iron rod. CCTV footage captured partially.",
+                    reporter_name="Sunita Deshmukh",
+                    reporter_phone="+91-9811223344",
+                    reporter_email="sunita.d@example.com",
+                    status="pending",
+                    ai_classification="Armed Robbery / Snatching",
+                    ai_priority="critical",
+                    ai_summary="AI Analysis: Incident categorized under 'Armed Robbery / Snatching'. Assigned priority: CRITICAL. Threat with weapon reported. Immediate verification recommended.",
+                    assigned_officer_id=None,
+                    created_at=datetime.utcnow() - timedelta(hours=8),
+                )
+                ev1 = models.ReportEvidence(
+                    id=str(uuid.uuid4()),
+                    report_id="rep-demo-001",
+                    file_name="bank_statement_fraud_transfer.pdf",
+                    file_type="document",
+                    file_path="/uploads/evidence/bank_statement_fraud_transfer.pdf",
+                    created_at=datetime.utcnow() - timedelta(days=1),
+                )
+                ev2 = models.ReportEvidence(
+                    id=str(uuid.uuid4()),
+                    report_id="rep-demo-002",
+                    file_name="cctv_snatch_escape_junction14.mp4",
+                    file_type="cctv",
+                    file_path="/uploads/evidence/cctv_snatch_escape_junction14.mp4",
+                    created_at=datetime.utcnow() - timedelta(hours=8),
+                )
+                db.add_all([r1, r2, ev1, ev2])
+                db.commit()
         except Exception as seed_err:
             print(f"--> Demo user seed notice: {seed_err}")
         finally:

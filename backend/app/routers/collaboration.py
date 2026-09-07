@@ -183,11 +183,9 @@ async def create_case_assignment(
     case_id: str,
     payload: schemas.AssignmentCreate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(auth.require_roles("admin", "analyst", "investigator")),
+    current_user: models.User = Depends(auth.require_roles("admin")),
 ):
     case = _get_case_or_404(db, case_id)
-    if current_user.role == models.RoleEnum.investigator and payload.assigned_to_user_id != current_user.id:
-        raise AuthorizationError("Investigators can only self-claim cases")
 
     target_user = risk_gates.check_assignment_gate(db, case_id, payload.assigned_to_user_id, current_user)
 

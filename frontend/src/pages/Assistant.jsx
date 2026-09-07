@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   listChatSessions,
   createChatSession,
@@ -9,6 +10,17 @@ import {
   cancelAgentAction,
   downloadChatTranscript,
 } from "../lib/api.js";
+import {
+  Search,
+  Volume2,
+  AlertTriangle,
+  Check,
+  X,
+  Mic,
+  ArrowRight,
+  Activity,
+  FileText
+} from "lucide-react";
 
 
 const ACTIVE_SESSION_KEY = "crime_intel_active_chat_session";
@@ -173,7 +185,7 @@ export default function Assistant() {
       const confirmMsg = {
         id: `confirm-${Date.now()}`,
         role: "assistant",
-        content: `✅ **Action Confirmed & Executed**\n\n${res.message}`,
+        content: `**Action Confirmed & Executed**\n\n${res.message}`,
         created_at: new Date().toISOString(),
         reasoning_steps: [`Confirmed & Executed tool '${pendingAction.tool_name}'`],
       };
@@ -196,7 +208,7 @@ export default function Assistant() {
       const cancelMsg = {
         id: `cancel-${Date.now()}`,
         role: "assistant",
-        content: "❌ Write action cancelled by officer.",
+        content: "Write action cancelled by officer.",
         created_at: new Date().toISOString(),
         reasoning_steps: [`Cancelled write tool '${pendingAction.tool_name}'`],
       };
@@ -276,7 +288,7 @@ export default function Assistant() {
   }
 
   return (
-    <div className="flex h-screen bg-bg text-ink overflow-hidden">
+    <div className="flex flex-1 h-full min-h-0 bg-base text-ink overflow-hidden">
       {/* ── 1. Left Sessions Column (260px) ────────────────────────────────── */}
       <div className="w-64 border-r border-line bg-panel flex flex-col">
         <div className="p-4 border-b border-line flex items-center justify-between">
@@ -369,99 +381,128 @@ export default function Assistant() {
 
           {messages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-8 text-muted font-mono">
-              <div className="w-12 h-12 rounded-full bg-teal/10 border border-teal/40 flex items-center justify-center text-teal text-xl mb-3">
-                🔍
+              <div className="w-14 h-14 rounded-2xl bg-teal/10 border border-teal/30 flex items-center justify-center text-teal text-2xl mb-4 shadow-[0_0_20px_rgba(20,184,166,0.15)]">
+                <Search className="w-6 h-6 text-teal" />
               </div>
-              <p className="text-ink font-display text-lg mb-1">Deep-Search AI Case Assistant</p>
-              <p className="text-xs max-w-md leading-relaxed">
-                Ask about specific case IDs (e.g. <code className="text-teal">CR-2026-0016</code>), suspect phone numbers, crime trends, or request investigative next steps.
+              <p className="text-ink font-display text-lg mb-1 tracking-wide">Deep-Search AI Case Assistant</p>
+              <p className="text-xs max-w-md leading-relaxed text-muted">
+                Ask about specific case IDs (e.g. <code className="text-teal font-semibold">CR-2026-0016</code>), suspect phone numbers, crime trends, or request investigative next steps.
               </p>
             </div>
           ) : (
-            messages.map((m) => {
-              const isUser = m.role === "user";
-              const isFocused = focusedMessage?.id === m.id;
+            <div className="space-y-4">
+              {messages.map((m, idx) => {
+                const isUser = m.role === "user";
+                const isFocused = focusedMessage?.id === m.id;
 
-              return (
-                <div
-                  key={m.id}
-                  onClick={() => !isUser && setFocusedMessage(m)}
-                  className={`flex ${isUser ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[80%] rounded-lg p-4 cursor-pointer transition border ${
-                      isUser
-                        ? "bg-amber text-base border-transparent"
-                        : isFocused
-                        ? "bg-panel2 border-teal ring-2 ring-teal/20"
-                        : "bg-panel border-line hover:border-line/80"
-                    }`}
+                return (
+                  <motion.div
+                    key={m.id || idx}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25 }}
+                    onClick={() => !isUser && setFocusedMessage(m)}
+                    className={`flex ${isUser ? "justify-end" : "justify-start"}`}
                   >
-                    <div className="flex items-center justify-between text-xs font-mono mb-2 border-b border-line/40 pb-1.5">
-                      <span className={isUser ? "text-base font-bold uppercase" : "text-teal font-bold uppercase"}>
-                        {isUser ? "Investigator Query" : "AI Assistant Response"}
-                      </span>
-                      <span className="text-muted text-[10px]">
-                        {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </div>
-
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap font-body">{m.content}</p>
-
-                    {!isUser && (
-                      <div className="flex items-center justify-between mt-3 pt-2 border-t border-line/40 text-xs font-mono">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSpeak(m);
-                          }}
-                          className="text-muted hover:text-teal transition flex items-center gap-1"
-                        >
-                          🔊 {speakingId === m.id ? "Stop Reading" : "Read Aloud"}
-                        </button>
-
-                        <span className="text-[11px] text-teal hover:underline">
-                          Inspect Reasoning & Sources →
+                    <div
+                      className={`max-w-[80%] rounded-xl p-4 cursor-pointer transition-all duration-200 border shadow-md ${
+                        isUser
+                          ? "bg-amber text-base font-medium border-transparent shadow-[0_4px_16px_rgba(245,158,11,0.2)]"
+                          : isFocused
+                          ? "bg-panel2 border-teal ring-2 ring-teal/30 shadow-[0_4px_20px_rgba(20,184,166,0.15)]"
+                          : "bg-panel border-line hover:border-teal/40 hover:bg-panel2/60"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-xs font-mono mb-2 border-b border-line/40 pb-1.5 gap-4">
+                        <span className={`flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px] ${isUser ? "text-base" : "text-teal"}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isUser ? "bg-base" : "bg-teal animate-pulse"}`} />
+                          {isUser ? "Investigator Query" : "AI Assistant Response"}
+                        </span>
+                        <span className={`text-[10px] font-mono ${isUser ? "text-base/70" : "text-muted"}`}>
+                          {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       </div>
-                    )}
+
+                      <p className={`text-sm leading-relaxed whitespace-pre-wrap font-body ${isUser ? "text-base" : "text-ink"}`}>{m.content}</p>
+
+                      {!isUser && (
+                        <div className="flex items-center justify-between mt-3 pt-2 border-t border-line/40 text-xs font-mono">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSpeak(m);
+                            }}
+                            className="text-muted hover:text-teal transition-colors flex items-center gap-1.5"
+                          >
+                            <Volume2 className="w-3.5 h-3.5" />
+                            <span>{speakingId === m.id ? "Stop Reading" : "Read Aloud"}</span>
+                          </button>
+
+                          <span className="text-[11px] text-teal hover:underline flex items-center gap-1">
+                            Inspect Reasoning & Sources →
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
+
+              {/* Tactical Typing / Thinking Indicator */}
+              {sending && (
+                <div className="flex justify-start">
+                  <div className="bg-panel border border-line rounded-xl p-3.5 flex items-center gap-3">
+                    <span className="w-2 h-2 rounded-full bg-teal animate-ping" />
+                    <span className="text-xs font-mono text-muted">
+                      Synthesizing intelligence & querying database...
+                    </span>
                   </div>
                 </div>
-              );
-            })
-          )}
-
-          {/* Write Action Confirmation Card */}
-          {pendingAction && (
-            <div className="bg-panel2 border-2 border-amber/80 rounded-lg p-4 space-y-3 font-mono text-xs shadow-2xl animate-slide-up">
-              <div className="flex items-center gap-2 text-amber font-bold text-sm">
-                <span>⚠️ WRITE ACTION CONFIRMATION REQUIRED</span>
-              </div>
-              <p className="text-ink text-xs leading-relaxed font-body">
-                {pendingAction.description}
-              </p>
-              <div className="bg-bg/60 p-2.5 rounded border border-line text-[11px] text-muted space-y-1">
-                <p><span className="text-teal">Tool:</span> {pendingAction.tool_name}</p>
-                <p><span className="text-teal">Target Parameters:</span> {JSON.stringify(pendingAction.arguments)}</p>
-              </div>
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  onClick={handleConfirmAction}
-                  disabled={actionExecuting}
-                  className="bg-amber text-base font-bold px-4 py-2 rounded text-xs hover:brightness-110 transition flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  {actionExecuting ? "Executing..." : "✓ Confirm & Execute Action"}
-                </button>
-                <button
-                  onClick={handleCancelAction}
-                  disabled={actionExecuting}
-                  className="border border-line text-muted hover:text-crit px-4 py-2 rounded text-xs transition disabled:opacity-50"
-                >
-                  ✕ Cancel Action
-                </button>
-              </div>
+              )}
             </div>
           )}
+
+          {/* Action Confirmation Request Drawer (HITL) */}
+          <AnimatePresence>
+            {pendingAction && (
+              <motion.div
+                initial={{ opacity: 0, y: 15, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 15, scale: 0.98 }}
+                className="bg-panel2 border-2 border-amber/80 rounded-xl p-4 space-y-3 font-mono text-xs shadow-2xl backdrop-blur-md"
+              >
+                <div className="flex items-center gap-2 text-amber font-bold text-sm">
+                  <AlertTriangle className="w-4 h-4 text-amber" />
+                  <span>WRITE ACTION CONFIRMATION REQUIRED</span>
+                </div>
+                <p className="text-ink text-xs leading-relaxed font-body">
+                  {pendingAction.description}
+                </p>
+                <div className="bg-bg/80 p-3 rounded-lg border border-line text-[11px] text-muted space-y-1">
+                  <p><span className="text-teal font-semibold">Tool:</span> {pendingAction.tool_name}</p>
+                  <p><span className="text-teal font-semibold">Target Parameters:</span> {JSON.stringify(pendingAction.arguments)}</p>
+                </div>
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    onClick={handleConfirmAction}
+                    disabled={actionExecuting}
+                    className="bg-amber text-base font-bold px-4 py-2 rounded-lg text-xs hover:brightness-110 active:scale-95 transition-all flex items-center gap-1.5 disabled:opacity-50 shadow-md"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                    <span>{actionExecuting ? "Executing..." : "Confirm & Execute Action"}</span>
+                  </button>
+                  <button
+                    onClick={handleCancelAction}
+                    disabled={actionExecuting}
+                    className="border border-line text-muted hover:text-crit hover:border-crit/40 px-4 py-2 rounded-lg text-xs transition-colors disabled:opacity-50 flex items-center gap-1"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                    <span>Cancel Action</span>
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           <div ref={bottomRef} />
 
@@ -490,16 +531,17 @@ export default function Assistant() {
                 className={`p-2 rounded text-sm transition ${listening ? "bg-crit text-ink animate-pulse" : "text-muted hover:text-ink"}`}
                 title="Voice input mic"
               >
-                🎤
+                <Mic className="w-4 h-4" />
               </button>
             )}
 
             <button
               onClick={handleSend}
               disabled={sending || !input.trim()}
-              className="bg-amber text-base font-semibold px-4 py-2 rounded text-xs font-mono hover:brightness-110 transition disabled:opacity-40"
+              className="bg-amber text-base font-semibold px-4 py-2 rounded text-xs font-mono hover:brightness-110 transition disabled:opacity-40 flex items-center gap-1"
             >
-              {sending ? "Analyzing..." : "Send Query ➔"}
+              <span>{sending ? "Analyzing..." : "Send Query"}</span>
+              <ArrowRight className="w-3 h-3" />
             </button>
           </div>
         </div>
@@ -523,7 +565,8 @@ export default function Assistant() {
             {/* AI Reasoning Pipeline */}
             <div>
               <p className="font-mono text-xs text-teal uppercase font-semibold mb-2 flex items-center gap-1.5">
-                ⚡ Execution Reasoning Steps
+                <Activity className="w-3.5 h-3.5" />
+                <span>Execution Reasoning Steps</span>
               </p>
               {!focusedMessage.reasoning_steps || focusedMessage.reasoning_steps.length === 0 ? (
                 <p className="text-muted text-xs font-mono">No recorded reasoning steps.</p>
@@ -541,8 +584,9 @@ export default function Assistant() {
 
             {/* Retrieved Source Case Citations */}
             <div>
-              <p className="font-mono text-xs text-amber uppercase font-semibold mb-2">
-                📄 Source Case Citations ({focusedSources.length})
+              <p className="font-mono text-xs text-amber uppercase font-semibold mb-2 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" />
+                <span>Source Case Citations ({focusedSources.length})</span>
               </p>
 
               {focusedSources.length === 0 ? (
@@ -569,7 +613,7 @@ export default function Assistant() {
                         target="_blank"
                         className="text-teal hover:underline text-[11px] block text-right pt-1 font-semibold"
                       >
-                        Open Case File ➔
+                        <span>Open Case File</span> &rarr;
                       </Link>
                     </div>
                   ))}

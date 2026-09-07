@@ -187,6 +187,17 @@ class CaseInvestigationStatusOut(BaseModel):
         from_attributes = True
 
 
+class CaseUpdate(BaseModel):
+    title: Optional[str] = None
+    crime_type: Optional[str] = None
+    district: Optional[str] = None
+    station_name: Optional[str] = None
+    status: Optional[CaseStatus] = None
+    severity: Optional[Severity] = None
+    summary: Optional[str] = None
+    investigator_note: Optional[str] = None
+
+
 class CaseOut(BaseModel):
     id: str
     case_id: str
@@ -206,6 +217,8 @@ class CaseOut(BaseModel):
     reviewer_id: Optional[str] = None
     reviewer_name: Optional[str] = None
     review_timestamp: Optional[datetime] = None
+    assigned_officer_name: Optional[str] = None
+
 
     class Config:
         from_attributes = True
@@ -873,6 +886,10 @@ class CitizenReportVerify(BaseModel):
     rejection_reason: Optional[str] = None
 
 
+class CitizenReportAssign(BaseModel):
+    officer_id: str
+
+
 class CitizenReportOut(BaseModel):
     id: str
     tracking_id: str
@@ -893,6 +910,8 @@ class CitizenReportOut(BaseModel):
     created_case_id: Optional[str] = None
     reviewed_by_user_id: Optional[str] = None
     reviewed_at: Optional[datetime] = None
+    assigned_officer_id: Optional[str] = None
+    assigned_officer_name: Optional[str] = None
     created_at: datetime
     evidence_items: List[ReportEvidenceOut] = []
 

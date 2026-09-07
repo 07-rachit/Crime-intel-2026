@@ -39,53 +39,44 @@ def list_cases(
 ):
     query = db.query(models.Case)
 
-    effective_scope = (role_scope or "").lower().strip()
-    if effective_scope == "investigator":
+    # ── Strict Role-Based Clearance Scoping ───────────────────────────
+    # Investigator: Only cases assigned to this officer
+    if current_user.role == models.RoleEnum.investigator:
         query = query.filter(
-            or_(
-                models.Case.status.in_([models.CaseStatus.open, models.CaseStatus.under_review]),
+            models.Case.assignments.any(
+                assigned_to_user_id=current_user.id,
+                status="active"
+            )
+        )
+    elif current_user.role == models.RoleEnum.viewer:
+        query = query.filter(models.Case.status == models.CaseStatus.closed)
+    elif current_user.role == models.RoleEnum.admin:
+        # Admin / DGP Office has unrestricted access to all cases, can optionally filter by role_scope
+        effective_scope = (role_scope or "").lower().strip()
+        if effective_scope == "investigator":
+            query = query.filter(
+                or_(
+                    models.Case.status.in_([models.CaseStatus.open, models.CaseStatus.under_review]),
+                    models.Case.assignments.any(models.CaseAssignment.status == "active"),
+                )
+            )
+        elif effective_scope in ["reviewer", "reviewer_authority"]:
+            query = query.filter(
                 models.Case.investigation_label.in_([
-                    models.InvestigationLabelEnum.suspected,
-                    models.InvestigationLabelEnum.verified,
-                    models.InvestigationLabelEnum.needs_review,
-                ]),
-                models.Case.assignments.any(models.CaseAssignment.assigned_to_user_id == current_user.id),
-            )
-        )
-    elif effective_scope in ["reviewer", "reviewer_authority"]:
-        query = query.filter(
-            or_(
-                models.Case.investigation_label.in_([
                     models.InvestigationLabelEnum.needs_review,
                     models.InvestigationLabelEnum.suspected,
-                ]),
-                models.Case.reviewer_id == current_user.id,
+                ])
             )
-        )
-    elif effective_scope == "authority":
-        query = query.filter(
-            or_(
-                models.Case.severity.in_([models.Severity.high, models.Severity.critical]),
-                models.Case.fir_details != None,
+        elif effective_scope == "authority":
+            query = query.filter(
+                or_(
+                    models.Case.severity.in_([models.Severity.high, models.Severity.critical]),
+                    models.Case.fir_details != None,
+                )
             )
-        )
-    elif effective_scope == "hospital":
-        query = query.filter(
-            or_(
-                models.Case.crime_type.ilike("%Assault%"),
-                models.Case.crime_type.ilike("%Murder%"),
-                models.Case.crime_type.ilike("%Fraud%"),
-                models.Case.severity.in_([models.Severity.high, models.Severity.critical]),
-            )
-        )
-    elif effective_scope == "user":
-        query = query.filter(
-            or_(
-                models.Case.assignments.any(models.CaseAssignment.assigned_to_user_id == current_user.id),
-                models.Case.reviewer_id == current_user.id,
-                models.Case.status == models.CaseStatus.open,
-            )
-        )
+    else:
+        # Analyst / other roles
+        pass
 
     if q:
         like = f"%{q}%"
@@ -121,11 +112,19 @@ def list_cases(
         .all()
     )
 
+    # Attach assigned officer name for display
+    for c in results:
+        active_assign = next((a for a in c.assignments if a.status == "active"), None)
+        if active_assign and active_assign.assigned_to:
+            setattr(c, "assigned_officer_name", active_assign.assigned_to.name)
+        else:
+            setattr(c, "assigned_officer_name", "Unassigned")
+
     return schemas.CaseListResponse(
         total=total,
         page=page,
         page_size=page_size,
-        active_role_scope=effective_scope or "all",
+        active_role_scope=current_user.role.value if current_user else "all",
         results=results,
     )
 
@@ -160,16 +159,35 @@ def get_case(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user),
 ):
-    case = db.query(models.Case).filter(models.Case.id == case_id).first()
+    case = db.query(models.Case).filter(or_(models.Case.id == case_id, models.Case.case_id == case_id)).first()
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
+
+    # Strict RBAC clearance check
+    if current_user.role == models.RoleEnum.investigator:
+        is_assigned = db.query(models.CaseAssignment).filter(
+            models.CaseAssignment.case_id == case.id,
+            models.CaseAssignment.assigned_to_user_id == current_user.id,
+            models.CaseAssignment.status == "active",
+        ).first()
+        if not is_assigned:
+            raise HTTPException(
+                status_code=403,
+                detail="Clearance Denied: You are not assigned to this case dossier. Access is restricted to the assigned investigating officer and DGP Office."
+            )
+    elif current_user.role == models.RoleEnum.viewer:
+        raise HTTPException(
+            status_code=403,
+            detail="Clearance Denied: Viewer accounts cannot inspect operational case dossiers."
+        )
 
     base_dict = {
         col: getattr(case, col)
         for col in [
             "id", "case_id", "title", "crime_type", "district", "station_name",
             "status", "severity", "incident_date", "latitude", "longitude",
-            "summary", "created_at",
+            "summary", "created_at", "investigation_label", "investigator_note",
+            "reviewer_id", "reviewer_name", "review_timestamp",
         ]
     }
 
@@ -181,6 +199,10 @@ def get_case(
 
     base_dict["evidence"] = [schemas.EvidenceOut.model_validate(e) for e in case.evidence]
 
+    active_assign = next((a for a in case.assignments if a.status == "active"), None)
+    base_dict["assigned_officer_name"] = active_assign.assigned_to.name if (active_assign and active_assign.assigned_to) else "Unassigned"
+    base_dict["assigned_officer_id"] = active_assign.assigned_to_user_id if active_assign else None
+
     # Embedded KSP FIR extensions
     base_dict["fir_details"] = fir_router._build_fir_out(case.fir_details) if case.fir_details else None
     base_dict["complainant"] = fir_router._build_complainant_out(case.complainant, current_user, db) if case.complainant else None
@@ -189,6 +211,72 @@ def get_case(
     base_dict["chargesheet"] = fir_router._build_cs_out(case.chargesheet) if case.chargesheet else None
 
     return base_dict
+
+
+@router.put("/{case_id}", response_model=schemas.CaseOut)
+def update_case_details(
+    case_id: str,
+    payload: schemas.CaseUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    case = db.query(models.Case).filter(or_(models.Case.id == case_id, models.Case.case_id == case_id)).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    # Strict Permission Check: Only DGP / Admin and Assigned Officer can update
+    if current_user.role == models.RoleEnum.admin:
+        pass  # DGP Office has clearance
+    elif current_user.role == models.RoleEnum.investigator:
+        is_assigned = db.query(models.CaseAssignment).filter(
+            models.CaseAssignment.case_id == case.id,
+            models.CaseAssignment.assigned_to_user_id == current_user.id,
+            models.CaseAssignment.status == "active",
+        ).first()
+        if not is_assigned:
+            raise HTTPException(
+                status_code=403,
+                detail="Clearance Denied: Only the assigned investigating officer and DGP Office can update this case."
+            )
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail="Clearance Denied: Insufficient privilege to update case details."
+        )
+
+    if payload.title is not None:
+        case.title = payload.title
+    if payload.crime_type is not None:
+        case.crime_type = payload.crime_type
+    if payload.district is not None:
+        case.district = payload.district
+    if payload.station_name is not None:
+        case.station_name = payload.station_name
+    if payload.status is not None:
+        case.status = payload.status
+    if payload.severity is not None:
+        case.severity = payload.severity
+    if payload.summary is not None:
+        case.summary = payload.summary
+    if payload.investigator_note is not None:
+        case.investigator_note = payload.investigator_note
+
+    case.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(case)
+
+    # Log audit action
+    log = models.AuditLog(
+        user_id=current_user.id,
+        action="update_case_details",
+        detail=f"Officer {current_user.name} ({current_user.role.value}) updated case details for {case.case_id}.",
+    )
+    db.add(log)
+    db.commit()
+
+    active_assign = next((a for a in case.assignments if a.status == "active"), None)
+    setattr(case, "assigned_officer_name", active_assign.assigned_to.name if (active_assign and active_assign.assigned_to) else "Unassigned")
+    return case
 
 
 @router.get("/{case_id}/timeline")
@@ -392,6 +480,24 @@ def update_case_investigation_label(
     current_user: models.User = Depends(auth.get_current_user),
 ):
     case = risk_gates.check_investigation_label_update_gate(db, case_id, payload, current_user)
+
+    # Strict Permission Check: Only DGP Office and Assigned Officer
+    if current_user.role == models.RoleEnum.investigator:
+        is_assigned = db.query(models.CaseAssignment).filter(
+            models.CaseAssignment.case_id == case.id,
+            models.CaseAssignment.assigned_to_user_id == current_user.id,
+            models.CaseAssignment.status == "active",
+        ).first()
+        if not is_assigned:
+            raise HTTPException(
+                status_code=403,
+                detail="Clearance Denied: Only the assigned investigating officer and DGP Office can update this case's investigation label."
+            )
+    elif current_user.role != models.RoleEnum.admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Clearance Denied: Insufficient privilege to update investigation labels."
+        )
 
     prev_label = case.investigation_label.value if hasattr(case.investigation_label, "value") else str(case.investigation_label or "Unreviewed")
     new_label_val = payload.label.value if hasattr(payload.label, "value") else str(payload.label)

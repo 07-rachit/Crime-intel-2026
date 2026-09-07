@@ -131,10 +131,32 @@ def list_citizen_reports(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(auth.get_current_user)
 ):
-    query = db.query(models.CitizenReport).options(joinedload(models.CitizenReport.evidence_items))
+    # Enforce strict role-based access control
+    if current_user.role == models.RoleEnum.investigator:
+        # Investigating officer only sees citizen reports assigned to them by DGP / Admin!
+        query = db.query(models.CitizenReport).options(
+            joinedload(models.CitizenReport.evidence_items),
+            joinedload(models.CitizenReport.assigned_officer),
+        ).filter(models.CitizenReport.assigned_officer_id == current_user.id)
+    elif current_user.role == models.RoleEnum.admin:
+        # Admin / DGP Office can see all citizen reports
+        query = db.query(models.CitizenReport).options(
+            joinedload(models.CitizenReport.evidence_items),
+            joinedload(models.CitizenReport.assigned_officer),
+        )
+    else:
+        raise HTTPException(
+            status_code=403,
+            detail="Clearance Denied: You do not have permission to view internal citizen complaints."
+        )
+
     if status:
         query = query.filter(models.CitizenReport.status == status)
-    return query.order_by(models.CitizenReport.created_at.desc()).all()
+
+    reports = query.order_by(models.CitizenReport.created_at.desc()).all()
+    for r in reports:
+        setattr(r, "assigned_officer_name", r.assigned_officer.name if r.assigned_officer else None)
+    return reports
 
 
 @router.get("/{report_id}", response_model=schemas.CitizenReportOut)
@@ -144,10 +166,72 @@ def get_citizen_report(
     current_user: models.User = Depends(auth.get_current_user)
 ):
     report = db.query(models.CitizenReport).options(
-        joinedload(models.CitizenReport.evidence_items)
+        joinedload(models.CitizenReport.evidence_items),
+        joinedload(models.CitizenReport.assigned_officer),
     ).filter(models.CitizenReport.id == report_id).first()
     if not report:
         raise HTTPException(status_code=404, detail="Citizen report not found")
+
+    if current_user.role == models.RoleEnum.investigator:
+        if report.assigned_officer_id != current_user.id:
+            raise HTTPException(
+                status_code=403,
+                detail="Clearance Denied: This citizen complaint is not assigned to your badge."
+            )
+    elif current_user.role != models.RoleEnum.admin:
+        raise HTTPException(
+            status_code=403,
+            detail="Clearance Denied: Insufficient privilege to view internal citizen complaints."
+        )
+
+    setattr(report, "assigned_officer_name", report.assigned_officer.name if report.assigned_officer else None)
+    return report
+
+
+@router.post("/{report_id}/assign", response_model=schemas.CitizenReportOut)
+def assign_citizen_report(
+    report_id: str,
+    payload: schemas.CitizenReportAssign,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.require_roles("admin"))
+):
+    report = db.query(models.CitizenReport).options(
+        joinedload(models.CitizenReport.evidence_items),
+        joinedload(models.CitizenReport.assigned_officer),
+    ).filter(models.CitizenReport.id == report_id).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Citizen report not found")
+
+    target_officer = db.query(models.User).filter(models.User.id == payload.officer_id).first()
+    if not target_officer:
+        raise HTTPException(status_code=404, detail="Officer user not found")
+
+    report.assigned_officer_id = target_officer.id
+    db.commit()
+    db.refresh(report)
+
+    # Dispatch notification to the assigned officer
+    notification = models.Notification(
+        id=str(uuid.uuid4()),
+        user_id=target_officer.id,
+        type="case_assigned",
+        title=f"Citizen Complaint Assigned: {report.tracking_id}",
+        message=f"DGP Office has assigned Citizen Complaint {report.tracking_id} ({report.crime_type}) to you for investigation.",
+        is_read=False,
+        created_at=datetime.utcnow()
+    )
+    db.add(notification)
+
+    # Audit log
+    audit_log = models.AuditLog(
+        user_id=current_user.id,
+        action="assign_citizen_report",
+        detail=f"DGP Office assigned complaint {report.tracking_id} to officer {target_officer.name}."
+    )
+    db.add(audit_log)
+    db.commit()
+
+    setattr(report, "assigned_officer_name", target_officer.name)
     return report
 
 

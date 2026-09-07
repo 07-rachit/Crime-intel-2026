@@ -1,5 +1,26 @@
 import { useState, useEffect } from "react";
 import { fetchActivityHistory, fetchActivityStats, deleteActivityRecord, formatApiError } from "../lib/api.js";
+import {
+  Folder,
+  Bot,
+  Bell,
+  Users,
+  ShieldCheck,
+  CreditCard,
+  FileText,
+  Download,
+  Activity,
+  Search,
+  ArrowDown,
+  ArrowUp,
+  Clock,
+  Table as TableIcon,
+  AlertTriangle,
+  RefreshCw,
+  User,
+  Trash2,
+  X
+} from "lucide-react";
 
 export default function ActivityHistory() {
   const [activities, setActivities] = useState([]);
@@ -79,15 +100,15 @@ export default function ActivityHistory() {
 
   function getModuleIcon(mod) {
     switch (mod) {
-      case "cases": return "📁";
-      case "ai_assistant": return "🤖";
-      case "citizen_reports": return "📢";
-      case "collaboration": return "🤝";
-      case "admin": return "⚙️";
-      case "finance": return "💳";
-      case "export": return "📄";
-      case "import": return "📥";
-      default: return "⚡";
+      case "cases": return <Folder className="w-3.5 h-3.5 text-teal" />;
+      case "ai_assistant": return <Bot className="w-3.5 h-3.5 text-cyan" />;
+      case "citizen_reports": return <Bell className="w-3.5 h-3.5 text-amber" />;
+      case "collaboration": return <Users className="w-3.5 h-3.5 text-purple-400" />;
+      case "admin": return <ShieldCheck className="w-3.5 h-3.5 text-teal" />;
+      case "finance": return <CreditCard className="w-3.5 h-3.5 text-violet-400" />;
+      case "export": return <FileText className="w-3.5 h-3.5 text-amber" />;
+      case "import": return <Download className="w-3.5 h-3.5 text-cyan" />;
+      default: return <Activity className="w-3.5 h-3.5 text-teal" />;
     }
   }
 
@@ -106,7 +127,7 @@ export default function ActivityHistory() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xl">📜</span>
+            <Activity className="w-5 h-5 text-teal" />
             <h1 className="font-display text-2xl text-ink tracking-wide">Persistent Activity History</h1>
             <span className="font-mono text-xs bg-teal/10 text-teal border border-teal/20 px-2 py-0.5 rounded">
               {totalItems} Recorded Actions
@@ -144,7 +165,7 @@ export default function ActivityHistory() {
               placeholder="Search history by title, description, module, user, or metadata..."
               className="w-full bg-panel2 border border-line rounded px-3 py-2 text-ink text-xs font-mono focus:outline-none focus:ring-1 focus:ring-teal pl-8"
             />
-            <span className="absolute left-2.5 top-2.5 text-muted text-xs">🔍</span>
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted" />
           </div>
 
           {/* Module Filter */}
@@ -185,7 +206,15 @@ export default function ActivityHistory() {
               onClick={() => setSortBy(sortBy === "timestamp_desc" ? "timestamp_asc" : "timestamp_desc")}
               className="bg-panel2 hover:bg-line border border-line px-2.5 py-1 rounded text-ink transition flex items-center gap-1"
             >
-              <span>{sortBy === "timestamp_desc" ? "⬇ Newest First" : "⬆ Oldest First"}</span>
+              {sortBy === "timestamp_desc" ? (
+                <>
+                  <ArrowDown className="w-3 h-3" /> Newest First
+                </>
+              ) : (
+                <>
+                  <ArrowUp className="w-3 h-3" /> Oldest First
+                </>
+              )}
             </button>
           </div>
 
@@ -193,15 +222,17 @@ export default function ActivityHistory() {
           <div className="flex items-center gap-1 bg-panel2 border border-line p-0.5 rounded text-xs font-mono">
             <button
               onClick={() => setViewMode("timeline")}
-              className={`px-3 py-1 rounded transition ${viewMode === "timeline" ? "bg-teal text-base font-bold" : "text-muted hover:text-ink"}`}
+              className={`px-3 py-1 rounded transition flex items-center gap-1.5 ${viewMode === "timeline" ? "bg-teal text-base font-bold" : "text-muted hover:text-ink"}`}
             >
-              ⏳ Timeline
+              <Clock className="w-3.5 h-3.5" />
+              <span>Timeline</span>
             </button>
             <button
               onClick={() => setViewMode("table")}
-              className={`px-3 py-1 rounded transition ${viewMode === "table" ? "bg-teal text-base font-bold" : "text-muted hover:text-ink"}`}
+              className={`px-3 py-1 rounded transition flex items-center gap-1.5 ${viewMode === "table" ? "bg-teal text-base font-bold" : "text-muted hover:text-ink"}`}
             >
-              📊 Table View
+              <TableIcon className="w-3.5 h-3.5" />
+              <span>Table View</span>
             </button>
           </div>
         </div>
@@ -209,15 +240,17 @@ export default function ActivityHistory() {
 
       {/* Error state */}
       {error && (
-        <div className="bg-crit/10 border border-crit/30 p-4 rounded text-crit font-mono text-xs">
-          ⚠️ {error}
+        <div className="bg-crit/10 border border-crit/30 p-4 rounded text-crit font-mono text-xs flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-crit" />
+          <span>{error}</span>
         </div>
       )}
 
       {/* Loading state */}
       {loading ? (
-        <div className="p-12 text-center text-muted font-mono text-xs">
-          <span className="animate-spin inline-block mr-2">⚙️</span> Loading persistent activity history...
+        <div className="p-12 text-center text-muted font-mono text-xs flex items-center justify-center gap-2">
+          <RefreshCw className="w-4 h-4 animate-spin text-teal" />
+          <span>Loading persistent activity history...</span>
         </div>
       ) : activities.length === 0 ? (
         <div className="p-12 text-center bg-panel border border-line rounded-lg space-y-2">
@@ -263,7 +296,7 @@ export default function ActivityHistory() {
 
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-line/50 font-mono text-[11px]">
                   <div className="flex items-center gap-2 text-muted">
-                    <span>👤 {item.user_name || "System"}</span>
+                    <span className="flex items-center gap-1"><User className="w-3 h-3" /> {item.user_name || "System"}</span>
                     {item.user_role && (
                       <span className="text-[10px] bg-line/40 px-1.5 py-0.2 rounded uppercase">
                         {item.user_role}
@@ -276,14 +309,15 @@ export default function ActivityHistory() {
                       onClick={() => setSelectedActivity(item)}
                       className="text-teal hover:underline font-bold"
                     >
-                      🔍 Inspect Details &rarr;
+                      Inspect Details &rarr;
                     </button>
                     {isAdmin && (
                       <button
                         onClick={() => handleDelete(item.id)}
-                        className="text-crit/70 hover:text-crit hover:underline ml-2"
+                        className="text-crit/70 hover:text-crit hover:underline ml-2 flex items-center gap-1"
                       >
-                        🗑️ Delete
+                        <Trash2 className="w-3 h-3" />
+                        <span>Delete</span>
                       </button>
                     )}
                   </div>
@@ -393,9 +427,10 @@ export default function ActivityHistory() {
               </div>
               <button
                 onClick={() => setSelectedActivity(null)}
-                className="text-muted hover:text-ink font-mono text-sm px-2 py-1 bg-panel2 rounded"
+                className="text-muted hover:text-ink font-mono text-sm px-2 py-1 bg-panel2 rounded flex items-center gap-1"
               >
-                ✕ Close
+                <X className="w-3.5 h-3.5" />
+                <span>Close</span>
               </button>
             </div>
 

@@ -234,7 +234,7 @@ def check_career_plan_search_gate(
     if page_size < 1 or page_size > 100:
         raise ValidationError("Page size must be between 1 and 100")
 
-    allowed_sort = ["newest", "oldest", "deadline", "alphabetical"]
+    allowed_sort = ["newest", "oldest", "deadline", "alphabetical", "deadline_asc", "deadline_desc"]
     if sort_by and sort_by.lower() not in allowed_sort:
         raise ValidationError(f"Invalid sort parameter. Allowed values: {', '.join(allowed_sort)}")
 

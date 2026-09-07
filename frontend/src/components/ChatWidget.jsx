@@ -3,6 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   createChatSession, getChatMessages, sendChatMessage, confirmAgentAction, cancelAgentAction, downloadChatTranscript,
 } from "../lib/api.js";
+import { AnimatePresence, motion } from "./motion.jsx";
+import { Activity, AlertTriangle, Check, X } from "lucide-react";
 
 
 const ACTIVE_SESSION_KEY = "ci_active_chat_session";
@@ -102,7 +104,8 @@ function MessageBubble({ msg, onSpeak, speakingId }) {
                   onClick={() => setShowReasoning(!showReasoning)}
                   className="text-[11px] font-mono text-teal hover:underline flex items-center gap-1"
                 >
-                  ⚡ {showReasoning ? "Hide Reasoning" : "Show Reasoning"}
+                  <Activity className="w-3 h-3" />
+                  <span>{showReasoning ? "Hide Reasoning" : "Show Reasoning"}</span>
                 </button>
               )}
             </div>
@@ -273,7 +276,7 @@ export default function ChatWidget() {
         {
           id: `confirm-${Date.now()}`,
           role: "assistant",
-          content: `✅ **Action Confirmed & Executed**\n\n${res.message}`,
+          content: `**Action Confirmed & Executed**\n\n${res.message}`,
           reasoning_steps: [`Confirmed & Executed tool '${pendingAction.tool_name}'`],
         },
       ]);
@@ -295,7 +298,7 @@ export default function ChatWidget() {
         {
           id: `cancel-${Date.now()}`,
           role: "assistant",
-          content: "❌ Write action cancelled by officer.",
+          content: "Write action cancelled by officer.",
           reasoning_steps: [`Cancelled write tool '${pendingAction.tool_name}'`],
         },
       ]);
@@ -309,8 +312,15 @@ export default function ChatWidget() {
 
   return (
     <>
+      <AnimatePresence>
       {open && (
-        <div className="fixed bottom-24 right-6 w-[400px] h-[580px] bg-panel border border-line rounded-lg shadow-2xl flex flex-col z-50 overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+          style={{ transformOrigin: "bottom right" }}
+          className="fixed bottom-24 right-6 w-[400px] h-[580px] bg-panel border border-line rounded-lg shadow-2xl flex flex-col z-50 overflow-hidden card-depth">
           <div className="px-4 py-3 border-b border-line bg-panel2">
             <div className="flex items-center justify-between mb-2">
               <div>
@@ -376,14 +386,22 @@ export default function ChatWidget() {
                 {" "}Tap the mic to ask by voice, in English or Kannada.
               </p>
             )}
-            {messages.map((m) => (
-              <MessageBubble key={m.id} msg={m} onSpeak={handleSpeak} speakingId={speakingId} />
+            {messages.map((m, i) => (
+              <motion.div
+                key={m.id}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2, delay: i > messages.length - 3 ? 0.05 : 0 }}
+              >
+                <MessageBubble msg={m} onSpeak={handleSpeak} speakingId={speakingId} />
+              </motion.div>
             ))}
 
             {pendingAction && (
               <div className="bg-panel2 border-2 border-amber/80 rounded-lg p-3 space-y-2 font-mono text-xs shadow-xl my-2 animate-slide-up">
                 <div className="flex items-center gap-1.5 text-amber font-bold text-[11px]">
-                  <span>⚠️ ACTION CONFIRMATION REQUIRED</span>
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber" />
+                  <span>ACTION CONFIRMATION REQUIRED</span>
                 </div>
                 <p className="text-ink text-[11px] leading-snug font-body">
                   {pendingAction.description}
@@ -393,17 +411,19 @@ export default function ChatWidget() {
                     type="button"
                     onClick={handleConfirmAction}
                     disabled={actionExecuting}
-                    className="bg-amber text-base font-bold px-3 py-1.5 rounded text-[11px] hover:brightness-110 transition disabled:opacity-50"
+                    className="bg-amber text-base font-bold px-3 py-1.5 rounded text-[11px] hover:brightness-110 transition disabled:opacity-50 flex items-center gap-1"
                   >
-                    {actionExecuting ? "Executing..." : "✓ Confirm & Execute"}
+                    <Check className="w-3 h-3" />
+                    <span>{actionExecuting ? "Executing..." : "Confirm & Execute"}</span>
                   </button>
                   <button
                     type="button"
                     onClick={handleCancelAction}
                     disabled={actionExecuting}
-                    className="border border-line text-muted hover:text-crit px-3 py-1.5 rounded text-[11px] transition disabled:opacity-50"
+                    className="border border-line text-muted hover:text-crit px-3 py-1.5 rounded text-[11px] transition disabled:opacity-50 flex items-center gap-1"
                   >
-                    ✕ Cancel
+                    <X className="w-3 h-3" />
+                    <span>Cancel</span>
                   </button>
                 </div>
               </div>
@@ -440,15 +460,26 @@ export default function ChatWidget() {
               {sending ? "..." : "Send"}
             </button>
           </form>
-        </div>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       <button
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-amber text-base flex items-center justify-center shadow-2xl hover:brightness-110 transition z-50"
-        title="Case Assistant"
+        className={`fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-full text-slate-950 font-bold transition-all duration-200 border border-white/20 shadow-2xl ${
+          open
+            ? "bg-slate-800 text-white border-line hover:bg-slate-700"
+            : "bg-gradient-to-r from-teal via-teal to-cyan hover:shadow-[0_0_30px_rgba(20,184,166,0.6)] hover:scale-105 active:scale-95 animate-breathe"
+        }`}
+        title="AI Case Copilot"
       >
-        {open ? <CloseIcon /> : <ChatIcon />}
+        <div className="relative flex items-center justify-center">
+          {open ? <CloseIcon /> : <ChatIcon />}
+          {!open && <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-white animate-ping" />}
+        </div>
+        <span className="font-mono text-xs tracking-wider uppercase font-extrabold">
+          {open ? "Close" : "AI Copilot"}
+        </span>
       </button>
     </>
   );

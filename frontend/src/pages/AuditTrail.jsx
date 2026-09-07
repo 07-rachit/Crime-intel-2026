@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { fetchAuditLogs, getCurrentUser } from "../lib/api.js";
+import { SkeletonTableRow } from "../components/Skeleton.jsx";
+import { StaggerContainer, StaggerItem } from "../components/motion.jsx";
 
 const ACTION_COLOR = {
   chat_query: "#3FD6C1",
@@ -10,14 +12,22 @@ const ACTION_COLOR = {
 
 export default function AuditTrail() {
   const [data, setData] = useState({ total: 0, results: [] });
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const user = getCurrentUser();
 
   useEffect(() => {
     if (user?.role !== "admin") return;
+    setLoading(true);
     fetchAuditLogs()
-      .then(setData)
-      .catch(() => setError("Could not load audit logs. Is the API running?"));
+      .then((res) => {
+        setData(res);
+        setLoading(false);
+      })
+      .catch(() => {
+        setError("Could not load audit logs. Is the API running?");
+        setLoading(false);
+      });
   }, [user]);
 
   if (user?.role !== "admin") {
@@ -46,10 +56,10 @@ export default function AuditTrail() {
         </p>
       )}
 
-      <div className="bg-panel border border-line rounded-md overflow-hidden">
+      <div className="bg-panel border border-line rounded-xl overflow-hidden card-depth">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b border-line text-muted text-xs font-mono uppercase">
+            <tr className="border-b border-line text-muted text-xs font-mono uppercase bg-panel2/40">
               <th className="text-left px-4 py-3">Timestamp</th>
               <th className="text-left px-4 py-3">User</th>
               <th className="text-left px-4 py-3">Action</th>
@@ -57,34 +67,44 @@ export default function AuditTrail() {
             </tr>
           </thead>
           <tbody>
-            {data.results.map((log) => (
-              <tr key={log.id} className="border-b border-line/50 hover:bg-panel2 transition">
-                <td className="px-4 py-3 text-muted font-mono text-xs whitespace-nowrap">
-                  {new Date(log.created_at).toLocaleString()}
-                </td>
-                <td className="px-4 py-3 text-ink text-xs">
-                  {log.user_name || "System"}
-                  {log.user_email && <span className="text-muted"> · {log.user_email}</span>}
-                </td>
-                <td className="px-4 py-3">
-                  <span
-                    className="text-xs font-mono uppercase px-2 py-1 rounded"
-                    style={{
-                      color: ACTION_COLOR[log.action] || "#7C8AA3",
-                      border: `1px solid ${ACTION_COLOR[log.action] || "#7C8AA3"}55`,
-                    }}
-                  >
-                    {log.action.replace(/_/g, " ")}
-                  </span>
-                </td>
-                <td className="px-4 py-3 text-muted text-xs max-w-md truncate" title={log.detail || ""}>
-                  {log.detail || "-"}
-                </td>
-              </tr>
-            ))}
-            {data.results.length === 0 && !error && (
+            {loading ? (
+              <>
+                <SkeletonTableRow cols={4} />
+                <SkeletonTableRow cols={4} />
+                <SkeletonTableRow cols={4} />
+                <SkeletonTableRow cols={4} />
+              </>
+            ) : (
+              data.results.map((log) => (
+                <tr key={log.id} className="border-b border-line/40 hover:bg-panel2/70 transition">
+                  <td className="px-4 py-3 text-muted font-mono text-xs whitespace-nowrap">
+                    {new Date(log.created_at).toLocaleString()}
+                  </td>
+                  <td className="px-4 py-3 text-ink text-xs">
+                    <span className="font-medium text-ink">{log.user_name || "System"}</span>
+                    {log.user_email && <span className="text-muted"> · {log.user_email}</span>}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className="text-xs font-mono uppercase px-2 py-1 rounded font-semibold"
+                      style={{
+                        color: ACTION_COLOR[log.action] || "#7C8AA3",
+                        border: `1px solid ${ACTION_COLOR[log.action] || "#7C8AA3"}55`,
+                        backgroundColor: `${ACTION_COLOR[log.action] || "#7C8AA3"}15`,
+                      }}
+                    >
+                      {log.action.replace(/_/g, " ")}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-muted text-xs max-w-md truncate" title={log.detail || ""}>
+                    {log.detail || "-"}
+                  </td>
+                </tr>
+              ))
+            )}
+            {!loading && data.results.length === 0 && !error && (
               <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-muted">
+                <td colSpan={4} className="px-4 py-8 text-center text-muted font-mono text-xs">
                   No audit entries yet.
                 </td>
               </tr>

@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { SkeletonTableRow } from "../components/Skeleton.jsx";
 import {
   fetchAgentRuns,
   fetchAgentRunDetail,
@@ -357,15 +359,16 @@ export default function Observability() {
             </thead>
             <tbody className="divide-y divide-slate-800/60">
               {loading ? (
-                <tr>
-                  <td colSpan="8" className="py-8 text-center text-slate-500">
-                    <RefreshIcon spinning={true} />
-                    Fetching real-time observability telemetry...
-                  </td>
-                </tr>
+                <>
+                  <SkeletonTableRow cols={8} />
+                  <SkeletonTableRow cols={8} />
+                  <SkeletonTableRow cols={8} />
+                  <SkeletonTableRow cols={8} />
+                  <SkeletonTableRow cols={8} />
+                </>
               ) : runs.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="py-8 text-center text-slate-500">
+                  <td colSpan="8" className="py-8 text-center text-slate-500 font-mono text-xs">
                     No agent execution runs matched your search criteria.
                   </td>
                 </tr>
@@ -486,9 +489,16 @@ export default function Observability() {
       </div>
 
       {/* Run Inspection Side Drawer */}
-      {selectedRunId && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
-          <div className="w-full max-w-2xl bg-slate-950 border-l border-slate-800 h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-200">
+      <AnimatePresence>
+        {selectedRunId && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 26, stiffness: 220 }}
+              className="w-full max-w-2xl bg-slate-950 border-l border-slate-800 h-full flex flex-col shadow-2xl"
+            >
             {/* Drawer Header */}
             <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
               <div>
@@ -683,9 +693,10 @@ export default function Observability() {
                 </>
               ) : null}
             </div>
-          </div>
+          </motion.div>
         </div>
       )}
+      </AnimatePresence>
     </div>
   );
 }

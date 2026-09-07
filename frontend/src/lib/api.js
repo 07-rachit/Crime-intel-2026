@@ -339,6 +339,11 @@ export async function deleteCaseComment(caseId, commentId) {
   return data;
 }
 
+export async function fetchOfficers() {
+  const { data } = await api.get("/users/officers");
+  return data;
+}
+
 export async function fetchCaseAssignments(caseId) {
   const { data } = await api.get(`/cases/${caseId}/assignments`);
   return data;
@@ -384,10 +389,6 @@ export async function fetchMyAssignedCases() {
   return data;
 }
 
-export async function fetchOfficers() {
-  const { data } = await api.get("/users/officers");
-  return data;
-}
 
 export async function downloadImportTemplate() {
   const response = await api.get("/import/cases/csv/template", {
@@ -425,6 +426,8 @@ export async function fetchCitizenReportById(reportId) {
   return data;
 }
 
+export const getCitizenReport = fetchCitizenReportById;
+
 export async function verifyCitizenReport(reportId, action, rejectionReason = "") {
   const { data } = await api.post(`/citizen-reports/${reportId}/verify`, {
     action,
@@ -435,6 +438,18 @@ export async function verifyCitizenReport(reportId, action, rejectionReason = ""
 
 export async function analyzeReportAI(reportId) {
   const { data } = await api.post(`/citizen-reports/${reportId}/analyze-ai`);
+  return data;
+}
+
+export async function assignCitizenReport(reportId, officerId) {
+  const { data } = await api.post(`/citizen-reports/${reportId}/assign`, {
+    officer_id: officerId,
+  });
+  return data;
+}
+
+export async function updateCaseDetails(caseId, payload) {
+  const { data } = await api.put(`/cases/${caseId}`, payload);
   return data;
 }
 
@@ -567,5 +582,6 @@ export async function fetchWorkflowStats() {
 }
 
 export default api;
+
 
 

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchOffenders, fetchOffenderProfile } from "../lib/api.js";
+import { FileText } from "lucide-react";
 
 const RISK_BADGE = {
   high: "text-crit border-crit/40 bg-crit/10",
@@ -180,9 +181,10 @@ export default function Offenders() {
           href="/RISK_SCORING.md"
           target="_blank"
           rel="noreferrer"
-          className="text-xs font-mono text-teal border border-teal/40 hover:bg-teal/10 rounded px-3 py-1.5 transition"
+          className="text-xs font-mono text-teal border border-teal/40 hover:bg-teal/10 rounded px-3 py-1.5 transition flex items-center gap-1.5"
         >
-          📄 View Scoring Model & Formula
+          <FileText className="w-3.5 h-3.5" />
+          <span>View Scoring Model & Formula</span>
         </a>
       </div>
 

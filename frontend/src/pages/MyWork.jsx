@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchMyTasks, fetchMyAssignedCases, updateCaseTask, getCurrentUser } from "../lib/api.js";
+import { FolderKanban, MapPin, ArrowRight, ClipboardList, CheckCircle2, Calendar, Check } from "lucide-react";
 
 const SEVERITY_COLOR = {
   low: "#3FD6C1",
@@ -69,7 +70,9 @@ export default function MyWork() {
       {/* ── SECTION 1: MY ASSIGNED CASES ─────────────────────────────────── */}
       <div>
         <h3 className="font-display text-xl text-ink mb-4 flex items-center justify-between">
-          <span>📁 Active Case Assignments ({assignedCases.length})</span>
+          <span className="flex items-center gap-2">
+            <FolderKanban className="w-5 h-5 text-teal" /> Active Case Assignments ({assignedCases.length})
+          </span>
         </h3>
 
         {assignedCases.length === 0 ? (
@@ -94,7 +97,7 @@ export default function MyWork() {
                     {c.title}
                   </h4>
                   <div className="flex items-center gap-2 text-[10px] text-muted mt-2">
-                    <span>📍 {c.district}</span>
+                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-cyan" /> {c.district}</span>
                     <span>&middot;</span>
                     <span className="uppercase">{c.crime_type}</span>
                   </div>
@@ -106,9 +109,10 @@ export default function MyWork() {
                   </span>
                   <Link
                     to={`/cases/${c.case_id}`}
-                    className="text-amber hover:underline text-xs font-semibold"
+                    className="text-amber hover:underline text-xs font-semibold flex items-center gap-1"
                   >
-                    Open Case File ➔
+                    <span>Open Case File</span>
+                    <ArrowRight className="w-3 h-3" />
                   </Link>
                 </div>
               </div>
@@ -120,12 +124,15 @@ export default function MyWork() {
       {/* ── SECTION 2: MY OPEN TASKS ACROSS ALL CASES ─────────────────────── */}
       <div>
         <h3 className="font-display text-xl text-ink mb-4 flex items-center justify-between">
-          <span>📋 My Open Tasks ({tasks.length})</span>
+          <span className="flex items-center gap-2">
+            <ClipboardList className="w-5 h-5 text-amber" /> My Open Tasks ({tasks.length})
+          </span>
         </h3>
 
         {tasks.length === 0 ? (
-          <div className="bg-panel border border-line rounded-lg p-6 text-center text-muted font-mono text-xs">
-            🎉 All caught up! No pending tasks assigned to you.
+          <div className="bg-panel border border-line rounded-lg p-6 text-center text-muted font-mono text-xs flex items-center justify-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-teal" />
+            <span>All caught up! No pending tasks assigned to you.</span>
           </div>
         ) : (
           <div className="space-y-3">
@@ -154,8 +161,8 @@ export default function MyWork() {
                         {t.case_severity || "medium"}
                       </span>
                       {t.due_date && (
-                        <span className={`text-[10px] ml-2 ${isOverdue ? "text-crit font-bold" : "text-muted"}`}>
-                          📅 Due: {new Date(t.due_date).toLocaleDateString()} {isOverdue ? "(OVERDUE)" : ""}
+                        <span className={`text-[10px] ml-2 flex items-center gap-1 ${isOverdue ? "text-crit font-bold" : "text-muted"}`}>
+                          <Calendar className="w-3 h-3" /> Due: {new Date(t.due_date).toLocaleDateString()} {isOverdue ? "(OVERDUE)" : ""}
                         </span>
                       )}
                     </div>
@@ -172,9 +179,10 @@ export default function MyWork() {
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => handleMarkDone(t.id, t.case_id)}
-                      className="bg-teal text-bg font-mono text-xs font-bold px-3 py-1.5 rounded hover:brightness-110 transition whitespace-nowrap"
+                      className="bg-teal text-bg font-mono text-xs font-bold px-3 py-1.5 rounded hover:brightness-110 transition whitespace-nowrap flex items-center gap-1"
                     >
-                      ✓ Mark Complete
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Mark Complete</span>
                     </button>
                   </div>
                 </div>

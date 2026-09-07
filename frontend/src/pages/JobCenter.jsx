@@ -1,8 +1,27 @@
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { SkeletonCard } from "../components/Skeleton.jsx";
 import {
   fetchJobs, fetchJobStats, submitBackgroundJob,
   retryJob, cancelJob, formatApiError
 } from "../lib/api.js";
+import {
+  FileText,
+  Download,
+  Bell,
+  Cpu,
+  BarChart3,
+  Zap,
+  Settings,
+  RefreshCw,
+  X,
+  Play,
+  Search,
+  Clock,
+  Check,
+  AlertCircle,
+  FileCode
+} from "lucide-react";
 
 export default function JobCenter() {
   const [jobs, setJobs] = useState([]);
@@ -138,21 +157,21 @@ export default function JobCenter() {
   function getStatusBadge(statusStr) {
     switch (statusStr) {
       case "COMPLETED":
-        return <span className="bg-teal/10 text-teal border border-teal/30 px-2.5 py-0.5 rounded font-mono text-[10px] uppercase font-bold">✓ COMPLETED</span>;
+        return <span className="bg-teal/10 text-teal border border-teal/30 px-2.5 py-0.5 rounded font-mono text-[10px] uppercase font-bold flex items-center gap-1"><Check className="w-3 h-3" /> COMPLETED</span>;
       case "RUNNING":
         return (
           <span className="bg-amber/10 text-amber border border-amber/30 px-2.5 py-0.5 rounded font-mono text-[10px] uppercase font-bold flex items-center gap-1">
-            <span className="animate-spin">⚙️</span> RUNNING
+            <RefreshCw className="w-3 h-3 animate-spin text-amber" /> RUNNING
           </span>
         );
       case "QUEUED":
-        return <span className="bg-panel2 text-muted border border-line px-2.5 py-0.5 rounded font-mono text-[10px] uppercase font-bold">⏳ QUEUED</span>;
+        return <span className="bg-panel2 text-muted border border-line px-2.5 py-0.5 rounded font-mono text-[10px] uppercase font-bold flex items-center gap-1"><Clock className="w-3 h-3" /> QUEUED</span>;
       case "RETRYING":
-        return <span className="bg-amber/20 text-amber border border-amber/40 px-2.5 py-0.5 rounded font-mono text-[10px] uppercase font-bold animate-pulse">↻ RETRYING</span>;
+        return <span className="bg-amber/20 text-amber border border-amber/40 px-2.5 py-0.5 rounded font-mono text-[10px] uppercase font-bold animate-pulse flex items-center gap-1"><RefreshCw className="w-3 h-3" /> RETRYING</span>;
       case "FAILED":
-        return <span className="bg-crit/10 text-crit border border-crit/30 px-2.5 py-0.5 rounded font-mono text-[10px] uppercase font-bold">✕ FAILED</span>;
+        return <span className="bg-crit/10 text-crit border border-crit/30 px-2.5 py-0.5 rounded font-mono text-[10px] uppercase font-bold flex items-center gap-1"><X className="w-3 h-3" /> FAILED</span>;
       case "CANCELLED":
-        return <span className="bg-line/40 text-muted border border-line px-2.5 py-0.5 rounded font-mono text-[10px] uppercase font-bold">∅ CANCELLED</span>;
+        return <span className="bg-line/40 text-muted border border-line px-2.5 py-0.5 rounded font-mono text-[10px] uppercase font-bold">CANCELLED</span>;
       default:
         return <span className="bg-panel2 text-muted px-2 py-0.5 rounded font-mono text-[10px]">{statusStr}</span>;
     }
@@ -160,12 +179,12 @@ export default function JobCenter() {
 
   function getJobIcon(type) {
     switch (type) {
-      case "pdf_export": return "📄";
-      case "csv_import": return "📥";
-      case "citizen_report_analysis": return "📢";
-      case "ai_content_generation": return "🤖";
-      case "business_analysis": return "📊";
-      default: return "⚡";
+      case "pdf_export": return <FileText className="w-4 h-4 text-teal" />;
+      case "csv_import": return <Download className="w-4 h-4 text-cyan" />;
+      case "citizen_report_analysis": return <Bell className="w-4 h-4 text-amber" />;
+      case "ai_content_generation": return <Cpu className="w-4 h-4 text-purple-400" />;
+      case "business_analysis": return <BarChart3 className="w-4 h-4 text-teal" />;
+      default: return <Zap className="w-4 h-4 text-amber" />;
     }
   }
 
@@ -175,7 +194,7 @@ export default function JobCenter() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="text-xl">⚙️</span>
+            <Settings className="w-5 h-5 text-teal" />
             <h1 className="font-display text-2xl text-ink tracking-wide">Background Job Center</h1>
             <span className="font-mono text-xs bg-amber/10 text-amber border border-amber/20 px-2 py-0.5 rounded">
               {totalItems} Jobs Tracked
@@ -190,7 +209,8 @@ export default function JobCenter() {
           onClick={() => setShowLaunchModal(true)}
           className="bg-amber hover:bg-amber-hover text-base font-bold font-mono text-xs px-4 py-2.5 rounded shadow transition flex items-center gap-2"
         >
-          <span>🚀 Launch Async Job</span>
+          <Play className="w-3.5 h-3.5 fill-current" />
+          <span>Launch Async Job</span>
         </button>
       </div>
 
@@ -205,7 +225,7 @@ export default function JobCenter() {
               placeholder="Search jobs by ID, type, user, or logs..."
               className="w-full bg-panel2 border border-line rounded px-3 py-2 text-ink text-xs font-mono focus:outline-none focus:ring-1 focus:ring-teal pl-8"
             />
-            <span className="absolute left-2.5 top-2.5 text-muted text-xs">🔍</span>
+            <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted" />
           </div>
 
           <select
@@ -238,18 +258,21 @@ export default function JobCenter() {
       </div>
 
       {error && (
-        <div className="bg-crit/10 border border-crit/30 p-4 rounded text-crit font-mono text-xs">
-          ⚠️ {error}
+        <div className="bg-crit/10 border border-crit/30 p-4 rounded text-crit font-mono text-xs flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 text-crit" />
+          <span>{error}</span>
         </div>
       )}
 
       {/* Main Job List */}
       {loading ? (
-        <div className="p-12 text-center text-muted font-mono text-xs">
-          <span className="animate-spin inline-block mr-2">⚙️</span> Polling background job status...
+        <div className="space-y-4">
+          <SkeletonCard className="h-28" />
+          <SkeletonCard className="h-28" />
+          <SkeletonCard className="h-28" />
         </div>
       ) : jobs.length === 0 ? (
-        <div className="p-12 text-center bg-panel border border-line rounded-lg space-y-2">
+        <div className="p-12 text-center bg-panel border border-line rounded-xl space-y-2 shadow-sm">
           <p className="text-muted font-mono text-sm">No background jobs found matching search filters.</p>
           <button
             onClick={() => { setSearchQuery(""); setStatusFilter(""); setTypeFilter(""); setPage(1); }}
@@ -260,20 +283,23 @@ export default function JobCenter() {
         </div>
       ) : (
         <div className="space-y-3">
-          {jobs.map((item) => (
-            <div
+          {jobs.map((item, index) => (
+            <motion.div
               key={item.id}
-              className="bg-panel border border-line rounded-lg p-4 hover:border-teal/50 transition shadow-sm space-y-3"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.04, duration: 0.2 }}
+              className="bg-panel border border-line rounded-xl p-4 hover:border-teal/40 hover:shadow-[0_4px_20px_rgba(0,0,0,0.25)] transition-all duration-200 shadow-sm space-y-3"
             >
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-line/60 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{getJobIcon(item.job_type)}</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xl p-2 bg-panel2 rounded-lg border border-line/40">{getJobIcon(item.job_type)}</span>
                   <div>
                     <div className="font-mono text-xs font-bold text-ink flex items-center gap-2">
                       <span>{item.job_type}</span>
                       <span className="text-[10px] text-muted font-normal">({item.id.slice(0, 8)})</span>
                     </div>
-                    <div className="text-[11px] text-muted font-mono">
+                    <div className="text-[11px] text-muted font-mono mt-0.5">
                       User: {item.user_name || "System"} • Created: {new Date(item.created_at).toLocaleTimeString()}
                     </div>
                   </div>
@@ -289,25 +315,30 @@ export default function JobCenter() {
 
               {/* Progress Bar */}
               {(item.status === "RUNNING" || item.status === "RETRYING" || item.status === "QUEUED") && (
-                <div className="space-y-1">
+                <div className="space-y-1.5 bg-panel2/40 p-2.5 rounded-lg border border-line/40">
                   <div className="flex items-center justify-between font-mono text-[10px] text-muted">
-                    <span>Progress: {item.progress_pct}%</span>
+                    <span className="flex items-center gap-1.5 font-bold text-ink">
+                      <span className="w-1.5 h-1.5 rounded-full bg-teal animate-ping" />
+                      Execution Progress: {item.progress_pct}%
+                    </span>
                     {item.retry_count > 0 && (
-                      <span className="text-amber">Retry attempt {item.retry_count}/{item.max_retries}</span>
+                      <span className="text-amber font-semibold">Retry attempt {item.retry_count}/{item.max_retries}</span>
                     )}
                   </div>
-                  <div className="w-full bg-panel2 h-2 rounded overflow-hidden border border-line">
+                  <div className="w-full bg-panel2 h-2.5 rounded-full overflow-hidden border border-line p-[1px]">
                     <div
-                      className="bg-teal h-full transition-all duration-300"
+                      className="bg-gradient-to-r from-teal/70 via-teal to-teal/90 h-full rounded-full transition-all duration-500 relative overflow-hidden"
                       style={{ width: `${Math.max(5, item.progress_pct)}%` }}
-                    />
+                    >
+                      <div className="absolute inset-0 bg-white/20 animate-[shimmer_1.5s_infinite] -skew-x-12" />
+                    </div>
                   </div>
                 </div>
               )}
 
               {/* Output Result / Error preview */}
               {item.status === "COMPLETED" && item.output_result && (
-                <div className="bg-teal/5 border border-teal/20 p-2.5 rounded font-mono text-[11px] text-ink flex items-center justify-between">
+                <div className="bg-teal/5 border border-teal/20 p-2.5 rounded-lg font-mono text-[11px] text-ink flex items-center justify-between">
                   <div className="truncate max-w-xl">
                     <span className="text-teal font-bold mr-2">Result:</span>
                     {JSON.stringify(item.output_result)}
@@ -315,9 +346,10 @@ export default function JobCenter() {
                   {item.output_result.download_url && (
                     <a
                       href={item.output_result.download_url}
-                      className="text-teal font-bold hover:underline shrink-0 ml-2"
+                      className="text-teal font-bold hover:underline shrink-0 ml-2 flex items-center gap-1"
                     >
-                      📥 Download Output
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download Output</span>
                     </a>
                   )}
                 </div>
@@ -333,32 +365,35 @@ export default function JobCenter() {
               <div className="flex items-center justify-between font-mono text-xs pt-1">
                 <button
                   onClick={() => setSelectedJob(item)}
-                  className="text-teal hover:underline font-bold"
+                  className="text-teal hover:underline font-bold flex items-center gap-1"
                 >
-                  📜 View Logs ({item.logs?.length || 0})
+                  <FileCode className="w-3.5 h-3.5" />
+                  <span>View Logs ({item.logs?.length || 0})</span>
                 </button>
 
                 <div className="flex items-center gap-2">
                   {(item.status === "FAILED" || item.status === "CANCELLED" || item.status === "TIMEOUT") && (
                     <button
                       onClick={() => handleRetry(item.id)}
-                      className="bg-amber/10 hover:bg-amber/20 text-amber border border-amber/30 px-3 py-1 rounded font-bold transition"
+                      className="bg-amber/10 hover:bg-amber/20 text-amber border border-amber/30 px-3 py-1 rounded font-bold transition flex items-center gap-1"
                     >
-                      ↻ Retry Job
+                      <RefreshCw className="w-3 h-3" />
+                      <span>Retry Job</span>
                     </button>
                   )}
 
                   {(item.status === "RUNNING" || item.status === "QUEUED") && (
                     <button
                       onClick={() => handleCancel(item.id)}
-                      className="bg-crit/10 hover:bg-crit/20 text-crit border border-crit/30 px-3 py-1 rounded transition"
+                      className="bg-crit/10 hover:bg-crit/20 text-crit border border-crit/30 px-3 py-1 rounded transition flex items-center gap-1"
                     >
-                      ✕ Cancel Job
+                      <X className="w-3 h-3" />
+                      <span>Cancel Job</span>
                     </button>
                   )}
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}
@@ -389,133 +424,150 @@ export default function JobCenter() {
       )}
 
       {/* Logs Drawer Modal */}
-      {selectedJob && (
-        <div className="fixed inset-0 z-50 bg-base/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-panel border border-line rounded-xl max-w-3xl w-full p-6 space-y-4 shadow-2xl relative max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-line pb-3">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{getJobIcon(selectedJob.job_type)}</span>
-                <h2 className="font-display text-xl text-ink">Job Execution Logs</h2>
-                <span className="font-mono text-xs text-muted">({selectedJob.id})</span>
+      <AnimatePresence>
+        {selectedJob && (
+          <div className="fixed inset-0 z-50 bg-base/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-panel border border-line rounded-xl max-w-3xl w-full p-6 space-y-4 shadow-2xl relative max-h-[85vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between border-b border-line pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{getJobIcon(selectedJob.job_type)}</span>
+                  <h2 className="font-display text-xl text-ink">Job Execution Logs</h2>
+                  <span className="font-mono text-xs text-muted">({selectedJob.id})</span>
+                </div>
+                <button
+                  onClick={() => setSelectedJob(null)}
+                  className="text-muted hover:text-ink font-mono text-sm px-2 py-1 bg-panel2 rounded hover:bg-panel2/80 transition flex items-center gap-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Close</span>
+                </button>
               </div>
-              <button
-                onClick={() => setSelectedJob(null)}
-                className="text-muted hover:text-ink font-mono text-sm px-2 py-1 bg-panel2 rounded"
-              >
-                ✕ Close
-              </button>
-            </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs bg-panel2 p-3 rounded border border-line">
-              <div>
-                <span className="text-muted block text-[10px]">JOB TYPE</span>
-                <span className="text-ink font-bold">{selectedJob.job_type}</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs bg-panel2 p-3 rounded-lg border border-line">
+                <div>
+                  <span className="text-muted block text-[10px]">JOB TYPE</span>
+                  <span className="text-ink font-bold">{selectedJob.job_type}</span>
+                </div>
+                <div>
+                  <span className="text-muted block text-[10px]">STATUS</span>
+                  {getStatusBadge(selectedJob.status)}
+                </div>
+                <div>
+                  <span className="text-muted block text-[10px]">RETRY COUNT</span>
+                  <span className="text-amber font-bold">{selectedJob.retry_count}/{selectedJob.max_retries}</span>
+                </div>
+                <div>
+                  <span className="text-muted block text-[10px]">DURATION</span>
+                  <span className="text-teal font-bold">{selectedJob.execution_duration_ms ? `${selectedJob.execution_duration_ms}ms` : "-"}</span>
+                </div>
               </div>
-              <div>
-                <span className="text-muted block text-[10px]">STATUS</span>
-                {getStatusBadge(selectedJob.status)}
-              </div>
-              <div>
-                <span className="text-muted block text-[10px]">RETRY COUNT</span>
-                <span className="text-amber font-bold">{selectedJob.retry_count}/{selectedJob.max_retries}</span>
-              </div>
-              <div>
-                <span className="text-muted block text-[10px]">DURATION</span>
-                <span className="text-teal font-bold">{selectedJob.execution_duration_ms ? `${selectedJob.execution_duration_ms}ms` : "-"}</span>
-              </div>
-            </div>
 
-            {/* Execution Log Output */}
-            <div>
-              <h3 className="font-mono text-xs text-muted mb-1 uppercase">Step-by-Step Execution Log</h3>
-              <div className="bg-base border border-line p-3 rounded text-[11px] font-mono text-teal space-y-1 max-h-60 overflow-y-auto">
-                {selectedJob.logs && selectedJob.logs.length > 0 ? (
-                  selectedJob.logs.map((logMsg, i) => <div key={i}>{logMsg}</div>)
-                ) : (
-                  <div className="text-muted">// No execution logs recorded yet</div>
+              {/* Execution Log Output */}
+              <div>
+                <h3 className="font-mono text-xs text-muted mb-1 uppercase">Step-by-Step Execution Log</h3>
+                <div className="bg-base border border-line p-3 rounded-lg text-[11px] font-mono text-teal space-y-1 max-h-60 overflow-y-auto">
+                  {selectedJob.logs && selectedJob.logs.length > 0 ? (
+                    selectedJob.logs.map((logMsg, i) => <div key={i}>{logMsg}</div>)
+                  ) : (
+                    <div className="text-muted">// No execution logs recorded yet</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 border-t border-line pt-3 font-mono text-xs">
+                {(selectedJob.status === "FAILED" || selectedJob.status === "CANCELLED") && (
+                  <button
+                    onClick={() => { handleRetry(selectedJob.id); setSelectedJob(null); }}
+                    className="bg-amber hover:bg-amber-hover text-base font-bold px-3 py-1.5 rounded flex items-center gap-1"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                    <span>Retry Job Now</span>
+                  </button>
                 )}
               </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 border-t border-line pt-3 font-mono text-xs">
-              {(selectedJob.status === "FAILED" || selectedJob.status === "CANCELLED") && (
-                <button
-                  onClick={() => { handleRetry(selectedJob.id); setSelectedJob(null); }}
-                  className="bg-amber hover:bg-amber-hover text-base font-bold px-3 py-1.5 rounded"
-                >
-                  ↻ Retry Job Now
-                </button>
-              )}
-            </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Launch New Job Modal */}
-      {showLaunchModal && (
-        <div className="fixed inset-0 z-50 bg-base/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <form
-            onSubmit={handleLaunchJob}
-            className="bg-panel border border-line rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative"
-          >
-            <div className="flex items-center justify-between border-b border-line pb-3">
-              <h2 className="font-display text-xl text-ink">Launch Asynchronous Background Job</h2>
-              <button
-                type="button"
-                onClick={() => setShowLaunchModal(false)}
-                className="text-muted hover:text-ink font-mono text-sm px-2 py-1 bg-panel2 rounded"
-              >
-                ✕ Close
-              </button>
-            </div>
-
-            <div className="space-y-3 font-mono text-xs">
-              <div>
-                <label className="text-muted block mb-1">JOB TYPE</label>
-                <select
-                  value={newJobType}
-                  onChange={(e) => setNewJobType(e.target.value)}
-                  className="w-full bg-panel2 border border-line rounded p-2 text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+      <AnimatePresence>
+        {showLaunchModal && (
+          <div className="fixed inset-0 z-50 bg-base/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <motion.form
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              onSubmit={handleLaunchJob}
+              className="bg-panel border border-line rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative"
+            >
+              <div className="flex items-center justify-between border-b border-line pb-3">
+                <h2 className="font-display text-xl text-ink">Launch Asynchronous Background Job</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowLaunchModal(false)}
+                  className="text-muted hover:text-ink font-mono text-sm px-2 py-1 bg-panel2 rounded flex items-center gap-1"
                 >
-                  <option value="pdf_export">📄 PDF Dossier Export</option>
-                  <option value="csv_import">📥 CSV Case Ingestion</option>
-                  <option value="citizen_report_analysis">📢 Citizen Report AI Analysis</option>
-                  <option value="ai_content_generation">🤖 AI Content Generation</option>
-                  <option value="business_analysis">📊 Business Trend Computation</option>
-                </select>
+                  <X className="w-3.5 h-3.5" />
+                  <span>Close</span>
+                </button>
               </div>
 
-              <div>
-                <label className="text-muted block mb-1">ENTITY ID (OPTIONAL)</label>
-                <input
-                  type="text"
-                  value={newEntityId}
-                  onChange={(e) => setNewEntityId(e.target.value)}
-                  placeholder="e.g. CASE-1002 or REPORT-99"
-                  className="w-full bg-panel2 border border-line rounded p-2 text-ink focus:outline-none focus:ring-1 focus:ring-teal"
-                />
-              </div>
-            </div>
+              <div className="space-y-3 font-mono text-xs">
+                <div>
+                  <label className="text-muted block mb-1">JOB TYPE</label>
+                  <select
+                    value={newJobType}
+                    onChange={(e) => setNewJobType(e.target.value)}
+                    className="w-full bg-panel2 border border-line rounded p-2 text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                  >
+                    <option value="pdf_export">PDF Dossier Export</option>
+                    <option value="csv_import">CSV Case Ingestion</option>
+                    <option value="citizen_report_analysis">Citizen Report AI Analysis</option>
+                    <option value="ai_content_generation">AI Content Generation</option>
+                    <option value="business_analysis">Business Trend Computation</option>
+                  </select>
+                </div>
 
-            <div className="flex justify-end gap-2 border-t border-line pt-3 font-mono text-xs">
-              <button
-                type="button"
-                onClick={() => setShowLaunchModal(false)}
-                className="bg-panel2 hover:bg-line border border-line px-3 py-2 rounded text-ink"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={launching}
-                className="bg-amber hover:bg-amber-hover text-base font-bold px-4 py-2 rounded disabled:opacity-50"
-              >
-                {launching ? "Launching..." : "Launch Background Job"}
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+                <div>
+                  <label className="text-muted block mb-1">ENTITY ID (OPTIONAL)</label>
+                  <input
+                    type="text"
+                    value={newEntityId}
+                    onChange={(e) => setNewEntityId(e.target.value)}
+                    placeholder="e.g. CASE-1002 or REPORT-99"
+                    className="w-full bg-panel2 border border-line rounded p-2 text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 border-t border-line pt-3 font-mono text-xs">
+                <button
+                  type="button"
+                  onClick={() => setShowLaunchModal(false)}
+                  className="bg-panel2 hover:bg-line border border-line px-3 py-2 rounded text-ink"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={launching}
+                  className="bg-amber hover:bg-amber-hover text-base font-bold px-4 py-2 rounded disabled:opacity-50"
+                >
+                  {launching ? "Launching..." : "Launch Background Job"}
+                </button>
+              </div>
+            </motion.form>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

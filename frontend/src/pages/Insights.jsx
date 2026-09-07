@@ -3,6 +3,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, ScatterChart, Scatter, ZAxis, LineChart, Line
 } from "recharts";
 import { fetchDemographicInsights, fetchSocioeconomicCorrelation, fetchSeasonalTrends } from "../lib/api.js";
+import { AlertTriangle } from "lucide-react";
 
 const COLORS = ["#3FD6C1", "#F0A202", "#E8833A", "#E23D5B", "#7C8AA3", "#5B8DEF"];
 
@@ -39,7 +40,7 @@ export default function Insights() {
 
       {/* Mandatory Policy Disclaimer Banner */}
       <div className="bg-amber/10 border border-amber/40 rounded-md p-4 mb-8 flex items-start gap-3">
-        <span className="text-amber font-mono text-xl leading-none">⚠️</span>
+        <AlertTriangle className="w-5 h-5 text-amber flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-ink font-display text-sm font-semibold mb-0.5">Statistical & Policy Disclaimer</p>
           <p className="text-muted text-xs leading-relaxed font-body">

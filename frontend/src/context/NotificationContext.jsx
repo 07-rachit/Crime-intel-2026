@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useRef } from "react";
 import api, { getCurrentUser, getToken } from "../lib/api.js";
+import { X } from "lucide-react";
 
 const NotificationContext = createContext(null);
 
@@ -167,9 +168,9 @@ export function NotificationProvider({ children }) {
             </div>
             <button
               onClick={() => removeToast(t.id)}
-              className="text-muted hover:text-ink text-xs font-mono"
+              className="text-muted hover:text-ink text-xs font-mono p-0.5"
             >
-              ✕
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         ))}

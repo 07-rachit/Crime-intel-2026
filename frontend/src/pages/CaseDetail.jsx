@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import api, {
   fetchSimilarCases,
   fetchFinancialTrail,
@@ -17,9 +17,33 @@ import api, {
   fetchOfficers,
   fetchCaseInvestigation,
   updateCaseInvestigation,
+  updateCaseDetails,
   exportCaseReport,
   getCurrentUser,
 } from "../lib/api.js";
+import { AnimatePresence, motion } from "../components/motion.jsx";
+import { SkeletonCard, SkeletonText } from "../components/Skeleton.jsx";
+import {
+  ShieldAlert,
+  Lock,
+  CheckCircle2,
+  AlertCircle,
+  Edit3,
+  UserCheck,
+  Download,
+  FileText,
+  Globe,
+  Table,
+  Loader2,
+  AlertTriangle,
+  X,
+  User,
+  Calendar,
+  Bot,
+  Flag,
+  Search,
+  ArrowRight
+} from "lucide-react";
 
 const SEVERITY_COLOR = {
   low: "#3FD6C1",
@@ -29,28 +53,57 @@ const SEVERITY_COLOR = {
 };
 
 const Field = ({ label, value }) => (
-  <div className="bg-panel border border-line rounded p-3">
+  <div className="bg-panel border border-line/60 rounded p-3 card-depth hover:bg-panel2/40 transition-colors">
     <p className="text-muted text-[10px] uppercase font-mono">{label}</p>
-    <p className="text-ink text-sm font-semibold mt-0.5">{value}</p>
+    <p className="text-ink text-sm font-semibold mt-0.5">{value || "—"}</p>
   </div>
 );
 
 const Section = ({ title, children }) => (
-  <div className="mb-8">
+  <motion.div
+    className="mb-8"
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+  >
     <h3 className="font-display text-lg text-ink mb-3">{title}</h3>
     {children}
-  </div>
+  </motion.div>
 );
 
 export default function CaseDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const currentUser = getCurrentUser();
+  const isAdmin = currentUser?.role === "admin";
+  const isAnalyst = currentUser?.role === "analyst";
+  const isInvestigator = currentUser?.role === "investigator";
+  const isSupervisor = isAdmin || isAnalyst;
+  const canModify = isSupervisor || isInvestigator;
+
   const [caseData, setCaseData] = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
+  const [accessDeniedMsg, setAccessDeniedMsg] = useState("");
   const [similarCases, setSimilarCases] = useState([]);
   const [financialTrail, setFinancialTrail] = useState(null);
   const [timeline, setTimeline] = useState([]);
   const [error, setError] = useState("");
   const [exporting, setExporting] = useState(false);
   const [showSensitive, setShowSensitive] = useState(false);
+
+  // Edit Case Details State
+  const [showEditCaseModal, setShowEditCaseModal] = useState(false);
+  const [editCaseForm, setEditCaseForm] = useState({
+    title: "",
+    crime_type: "",
+    district: "",
+    station_name: "",
+    status: "open",
+    severity: "medium",
+    summary: "",
+  });
+  const [editCaseSaving, setEditCaseSaving] = useState(false);
+  const [editCaseError, setEditCaseError] = useState("");
 
   // Collaboration State
   const [assignments, setAssignments] = useState([]);
@@ -78,13 +131,6 @@ export default function CaseDetail() {
   const [newCommentText, setNewCommentText] = useState("");
   const [collabError, setCollabError] = useState("");
 
-  const currentUser = getCurrentUser();
-  const isAdmin = currentUser?.role === "admin";
-  const isAnalyst = currentUser?.role === "analyst";
-  const isInvestigator = currentUser?.role === "investigator";
-  const isSupervisor = isAdmin || isAnalyst;
-  const canModify = isSupervisor || isInvestigator;
-
   const DEMO_CASE_FALLBACK = {
     id, case_id: `CASE-${id?.toUpperCase() || 'DEMO'}`, title: "Case Intelligence Record",
     crime_type: "General", severity: "medium", status: "open", district: "Patna",
@@ -94,16 +140,45 @@ export default function CaseDetail() {
   };
 
   useEffect(() => {
+    setAccessDenied(false);
     api
       .get(`/cases/${id}`)
-      .then(({ data }) => setCaseData(data))
-      .catch(() => {
+      .then(({ data }) => {
+        setCaseData(data);
+        setEditCaseForm({
+          title: data.title || "",
+          crime_type: data.crime_type || "",
+          district: data.district || "",
+          station_name: data.station_name || "",
+          status: data.status || "open",
+          severity: data.severity || "medium",
+          summary: data.summary || "",
+        });
+      })
+      .catch((err) => {
+        if (err.response?.status === 403) {
+          setAccessDenied(true);
+          setAccessDeniedMsg(err.response?.data?.detail || "Clearance Denied: You are not assigned to this case dossier.");
+          return;
+        }
         // Try fetching from the cases list to find a match
         api.get(`/cases?page_size=100`)
           .then(({ data }) => {
             const found = (data.results || []).find(c => c.id === id || c.case_id === id);
-            if (found) { setCaseData(found); }
-            else { setCaseData(DEMO_CASE_FALLBACK); }
+            if (found) { 
+              setCaseData(found); 
+              setEditCaseForm({
+                title: found.title || "",
+                crime_type: found.crime_type || "",
+                district: found.district || "",
+                station_name: found.station_name || "",
+                status: found.status || "open",
+                severity: found.severity || "medium",
+                summary: found.summary || "",
+              });
+            } else { 
+              setCaseData(DEMO_CASE_FALLBACK); 
+            }
           })
           .catch(() => setCaseData(DEMO_CASE_FALLBACK));
       });
@@ -116,6 +191,37 @@ export default function CaseDetail() {
     // Collaboration Data
     loadCollaborationData();
   }, [id]);
+
+  const isAssignedOfficer = assignments.some(
+    (a) => a.assigned_to_user_id === currentUser?.id && a.status === "active"
+  ) || (caseData?.assigned_officer_id === currentUser?.id);
+  const canUpdateCase = isAdmin || (isInvestigator && isAssignedOfficer);
+
+  async function handleSaveCaseDetails(e) {
+    if (e) e.preventDefault();
+    setEditCaseSaving(true);
+    setEditCaseError("");
+    try {
+      const updated = await updateCaseDetails(id, editCaseForm);
+      setCaseData((prev) => ({
+        ...prev,
+        title: updated.title,
+        crime_type: updated.crime_type,
+        district: updated.district,
+        station_name: updated.station_name,
+        status: updated.status,
+        severity: updated.severity,
+        summary: updated.summary,
+      }));
+      setShowEditCaseModal(false);
+      setInvestigationSuccessMsg("Case details updated successfully.");
+      setTimeout(() => setInvestigationSuccessMsg(""), 4000);
+    } catch (err) {
+      setEditCaseError(err.response?.data?.detail || "Failed to update case details. Clearance check failed.");
+    } finally {
+      setEditCaseSaving(false);
+    }
+  }
 
   async function handleSaveInvestigationLabel() {
     if (!newNote.trim() || newNote.trim().length < 3) {
@@ -139,7 +245,7 @@ export default function CaseDetail() {
         review_timestamp: updated.review_timestamp,
       }));
       setShowLabelModal(false);
-      setInvestigationSuccessMsg(`Investigation label updated to '${updated.current_label}' successfully!`);
+      setInvestigationSuccessMsg(`Investigation label updated to '${updated.current_label}' successfully.`);
       setTimeout(() => setInvestigationSuccessMsg(""), 5000);
     } catch (err) {
       setInvestigationError(err.response?.data?.error?.message || err.response?.data?.detail || "Failed to update investigation label.");
@@ -151,15 +257,15 @@ export default function CaseDetail() {
   const renderLabelBadge = (label) => {
     const l = label || "Unreviewed";
     if (l === "Suspected") {
-      return <span className="bg-amber/20 text-amber border border-amber/40 px-2.5 py-1 rounded text-xs font-mono font-semibold">⚠️ Suspected</span>;
+      return <span className="bg-amber/20 text-amber border border-amber/40 px-2.5 py-1 rounded text-xs font-mono font-semibold">SUSPECTED</span>;
     }
     if (l === "Verified") {
-      return <span className="bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-2.5 py-1 rounded text-xs font-mono font-semibold">✓ Verified</span>;
+      return <span className="bg-teal/20 text-teal border border-teal/40 px-2.5 py-1 rounded text-xs font-mono font-semibold">VERIFIED</span>;
     }
     if (l === "Needs Review") {
-      return <span className="bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 px-2.5 py-1 rounded text-xs font-mono font-semibold">🔍 Needs Review</span>;
+      return <span className="bg-cyan/20 text-cyan border border-cyan/40 px-2.5 py-1 rounded text-xs font-mono font-semibold">NEEDS REVIEW</span>;
     }
-    return <span className="bg-slate-700/40 text-slate-400 border border-slate-600 px-2.5 py-1 rounded text-xs font-mono">Unreviewed</span>;
+    return <span className="bg-panel2 text-muted border border-line px-2.5 py-1 rounded text-xs font-mono">UNREVIEWED</span>;
   };
 
   function loadCollaborationData() {
@@ -301,6 +407,35 @@ export default function CaseDetail() {
     }
   }
 
+  if (accessDenied) {
+    return (
+      <div className="p-10 max-w-xl mx-auto my-12 text-center space-y-4 glass-panel border border-crit/40 rounded-2xl shadow-2xl">
+        <ShieldAlert className="w-14 h-14 text-crit mx-auto" />
+        <h2 className="font-display font-extrabold text-2xl text-white tracking-wide">
+          ACCESS RESTRICTED &middot; CLEARANCE DENIED
+        </h2>
+        <p className="text-xs font-mono text-muted max-w-md mx-auto">
+          {accessDeniedMsg}
+        </p>
+        <div className="bg-panel2/80 p-4 rounded-xl border border-line/60 text-xs font-mono text-muted text-left space-y-1.5">
+          <p className="text-ink font-semibold flex items-center gap-1.5">
+            <Lock className="w-3.5 h-3.5 text-teal" /> RBAC Protocol:
+          </p>
+          <p>• Only the assigned investigating officer and DGP Office are cleared to inspect or modify this case dossier.</p>
+          <p>• Access restrictions are enforced at both the API and database levels.</p>
+        </div>
+        <div className="pt-2">
+          <button
+            onClick={() => navigate("/cases")}
+            className="px-5 py-2.5 bg-teal text-base font-mono font-bold text-xs rounded-xl shadow hover:bg-teal/90 transition"
+          >
+            ← Return to Authorized Cases
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (error) {
     return (
       <div className="p-8">
@@ -315,7 +450,16 @@ export default function CaseDetail() {
   }
 
   if (!caseData) {
-    return <div className="p-8 text-muted text-sm font-mono">Loading case file...</div>;
+    return (
+      <div className="p-4 md:p-8 max-w-5xl space-y-6">
+        <SkeletonCard />
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <SkeletonCard /><SkeletonCard /><SkeletonCard />
+          <SkeletonCard /><SkeletonCard /><SkeletonCard />
+        </div>
+        <SkeletonText lines={5} />
+      </div>
+    );
   }
 
   const fir = caseData.fir_details;
@@ -328,7 +472,7 @@ export default function CaseDetail() {
         ← BACK TO CASE SEARCH
       </Link>
 
-      <div className="flex items-start justify-between mt-3 mb-6">
+      <div className="flex items-start justify-between mt-3 mb-6 flex-wrap gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <p className="font-mono text-teal text-xs tracking-[0.2em]">{caseData.case_id}</p>
@@ -337,41 +481,65 @@ export default function CaseDetail() {
                 FIR Crime No: {fir.crime_no}
               </span>
             )}
+            <span className="font-mono text-[10px] bg-panel2 border border-line text-muted px-2 py-0.5 rounded">
+              Assigned Officer: {caseData.assigned_officer_name || "Unassigned"}
+            </span>
           </div>
-          <h2 className="font-display text-3xl text-ink">{caseData.title}</h2>
+          <h2 className="font-display text-3xl text-ink font-bold">{caseData.title}</h2>
         </div>
-        <button
-          onClick={() => setShowExportModal(true)}
-          aria-label="Export Security Case Report"
-          title="Export complete investigative report in PDF, HTML, or CSV format"
-          className="bg-amber hover:bg-amber/90 text-base font-mono font-bold text-xs px-4 py-2.5 rounded shadow transition flex items-center gap-2 whitespace-nowrap cursor-pointer"
-        >
-          <span>⬇</span> Export Case Report (PDF / HTML / CSV)
-        </button>
+
+        <div className="flex items-center gap-2">
+          {canUpdateCase && (
+            <button
+              onClick={() => setShowEditCaseModal(true)}
+              className="bg-teal text-base font-mono font-bold text-xs px-3.5 py-2.5 rounded-xl shadow transition flex items-center gap-1.5 hover:bg-teal/90"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>Edit Case Details</span>
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowExportModal(true)}
+            aria-label="Export Security Case Report"
+            title="Export complete investigative report in PDF, HTML, or CSV format"
+            className="bg-panel2 hover:bg-line border border-line text-ink font-mono font-bold text-xs px-3.5 py-2.5 rounded-xl shadow transition flex items-center gap-2 whitespace-nowrap cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5 text-teal" />
+            <span>Export Report</span>
+          </button>
+        </div>
       </div>
 
       {collabError && (
-        <div className="mb-4 border border-crit/40 bg-crit/10 text-crit text-xs font-mono p-3 rounded">
-          {collabError}
+        <div className="mb-4 border border-crit/40 bg-crit/10 text-crit text-xs font-mono p-3 rounded-xl flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>{collabError}</span>
         </div>
       )}
 
       {exportSuccessMsg && (
-        <div className="mb-4 border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 text-xs font-mono p-3 rounded flex items-center justify-between">
-          <span>✓ {exportSuccessMsg}</span>
-          <button onClick={() => setExportSuccessMsg("")} className="text-muted hover:text-ink">✕</button>
+        <div className="mb-4 border border-teal/40 bg-teal/10 text-teal text-xs font-mono p-3 rounded-xl flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{exportSuccessMsg}</span>
+          </span>
+          <button onClick={() => setExportSuccessMsg("")} className="text-muted hover:text-ink p-0.5"><X className="w-3.5 h-3.5" /></button>
         </div>
       )}
 
       {investigationSuccessMsg && (
-        <div className="mb-4 border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 text-xs font-mono p-3 rounded flex items-center justify-between">
-          <span>✓ {investigationSuccessMsg}</span>
-          <button onClick={() => setInvestigationSuccessMsg("")} className="text-muted hover:text-ink">✕</button>
+        <div className="mb-4 border border-teal/40 bg-teal/10 text-teal text-xs font-mono p-3 rounded-xl flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            <span>{investigationSuccessMsg}</span>
+          </span>
+          <button onClick={() => setInvestigationSuccessMsg("")} className="text-muted hover:text-ink p-0.5"><X className="w-3.5 h-3.5" /></button>
         </div>
       )}
 
       {/* ── SECURITY CASE INVESTIGATION REVIEW & LABELS SECTION ───────────────── */}
-      <Section title="🏷️ Security Case Investigation Review & Labels">
+      <Section title="Security Case Investigation Review & Labels">
         <div className="bg-panel border border-line rounded-lg p-5 space-y-5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-line pb-4">
             <div>
@@ -394,30 +562,37 @@ export default function CaseDetail() {
                   setNewNote(caseData.investigator_note || "");
                   setShowLabelModal(true);
                 }}
-                className="bg-amber hover:bg-amber/90 text-base font-mono font-bold text-xs px-4 py-2 rounded shadow transition flex items-center gap-2"
+                className="bg-teal hover:bg-teal/90 text-base font-mono font-bold text-xs px-4 py-2 rounded-xl shadow transition flex items-center gap-1.5"
               >
-                <span>🏷️</span> Update Investigation Label & Note
+                <Edit3 className="w-3.5 h-3.5" />
+                <span>Update Investigation Label & Note</span>
               </button>
             )}
           </div>
 
           {/* Current Note */}
           {caseData.investigator_note && (
-            <div className="bg-panel2 border border-line rounded p-4">
-              <p className="text-muted text-xs font-mono uppercase mb-1">Investigator Rationale & Evidence Note</p>
+            <div className="bg-panel2 border border-line rounded-xl p-4">
+              <p className="text-muted text-xs font-mono uppercase mb-1 font-semibold">Investigator Rationale & Evidence Note</p>
               <p className="text-ink text-sm leading-relaxed whitespace-pre-wrap">{caseData.investigator_note}</p>
             </div>
           )}
 
           {/* Chronological Investigation History Timeline */}
           <div>
-            <h4 className="font-mono text-xs text-muted uppercase tracking-wider mb-3">Investigation Audit History</h4>
+            <h4 className="font-mono text-xs text-muted uppercase tracking-wider mb-3 font-semibold">Investigation Audit History</h4>
             {!investigationData || !investigationData.history || investigationData.history.length === 0 ? (
               <p className="text-muted text-xs font-mono">No prior investigation label reviews recorded.</p>
             ) : (
               <div className="space-y-3 relative before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-line">
-                {investigationData.history.map((hist) => (
-                  <div key={hist.id} className="relative pl-8 bg-panel2 border border-line rounded p-3 text-xs font-mono">
+                {investigationData.history.map((hist, idx) => (
+                  <motion.div
+                    key={hist.id}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.25, delay: idx * 0.06 }}
+                    className="relative pl-8 bg-panel2 border border-line/60 rounded-xl p-3 text-xs font-mono"
+                  >
                     <div className="absolute left-2 top-3.5 w-2.5 h-2.5 rounded-full bg-teal" />
                     <div className="flex items-center justify-between mb-1 flex-wrap gap-2">
                       <div className="flex items-center gap-2">
@@ -432,7 +607,7 @@ export default function CaseDetail() {
                     </div>
                     <p className="text-ink mt-1 font-body text-xs">{hist.investigator_note}</p>
                     <p className="text-muted text-[10px] mt-1">Reviewer: {hist.reviewer_name} (ID: {hist.reviewer_id})</p>
-                  </div>
+                  </motion.div>
                 ))}
               </div>
             )}
@@ -441,7 +616,7 @@ export default function CaseDetail() {
       </Section>
 
       {/* ── CASE COLLABORATION SECTION ───────────────────────────────────── */}
-      <Section title="🤝 Case Collaboration & Coordination">
+      <Section title="Case Collaboration & Assigned Officers">
         <div className="space-y-6 bg-panel border border-line rounded-lg p-5">
           {/* 1. Assigned Officers Sub-section */}
           <div>
@@ -550,36 +725,36 @@ export default function CaseDetail() {
 
             {/* Add Task Form */}
             {canModify && (
-              <form onSubmit={handleCreateTask} className="bg-panel2 border border-line rounded p-3 mb-4 space-y-2">
+              <form onSubmit={handleCreateTask} className="bg-panel2/60 border border-line/70 rounded-2xl p-4 mb-4 space-y-3 shadow-md">
                 <div className="flex gap-2">
                   <input
                     type="text"
                     value={newTaskTitle}
                     onChange={(e) => setNewTaskTitle(e.target.value)}
                     placeholder="New task title (e.g. Verify CCTV footage)..."
-                    className="flex-1 bg-bg border border-line rounded px-3 py-1.5 text-xs text-ink outline-none focus:border-teal transition"
+                    className="flex-1 bg-panel/90 border border-line/80 rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-muted/50 outline-none focus:border-teal focus:ring-1 focus:ring-teal/30 transition-all font-body"
                     required
                   />
                   <button
                     type="submit"
                     disabled={!newTaskTitle.trim()}
-                    className="bg-teal text-bg font-mono text-xs px-3 py-1.5 rounded font-semibold hover:brightness-110 transition disabled:opacity-40"
+                    className="bg-gradient-to-r from-teal to-cyan text-base font-mono text-xs px-4 py-2 rounded-xl font-bold hover:brightness-110 active:scale-95 transition-all disabled:opacity-40 shadow-sm"
                   >
                     + Add Task
                   </button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 font-mono text-xs">
                   <input
                     type="text"
                     value={newTaskDesc}
                     onChange={(e) => setNewTaskDesc(e.target.value)}
                     placeholder="Optional description..."
-                    className="flex-1 bg-bg border border-line rounded px-3 py-1 text-xs text-ink outline-none"
+                    className="flex-1 bg-panel/90 border border-line/80 rounded-xl px-3.5 py-2 text-xs text-white placeholder:text-muted/50 outline-none focus:border-teal focus:ring-1 focus:ring-teal/30 font-body transition-all"
                   />
                   <select
                     value={newTaskAssignee}
                     onChange={(e) => setNewTaskAssignee(e.target.value)}
-                    className="bg-bg border border-line rounded px-2 py-1 text-xs text-ink font-body"
+                    className="bg-panel/90 border border-line/80 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-teal"
                   >
                     <option value="">Unassigned</option>
                     {officers.map((o) => (
@@ -592,7 +767,7 @@ export default function CaseDetail() {
                     type="date"
                     value={newTaskDueDate}
                     onChange={(e) => setNewTaskDueDate(e.target.value)}
-                    className="bg-bg border border-line rounded px-2 py-1 text-xs text-ink font-body"
+                    className="bg-panel/90 border border-line/80 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-teal"
                   />
                 </div>
               </form>
@@ -647,11 +822,11 @@ export default function CaseDetail() {
                               {t.status.replace("_", " ")}
                             </span>
                             {t.assigned_to_name && (
-                              <span className="text-muted">👤 {t.assigned_to_name}</span>
+                              <span className="text-muted flex items-center gap-1"><User className="w-3 h-3" /> {t.assigned_to_name}</span>
                             )}
                             {t.due_date && (
-                              <span className={isOverdue ? "text-crit font-bold" : "text-muted"}>
-                                📅 {new Date(t.due_date).toLocaleDateString()} {isOverdue ? "(OVERDUE)" : ""}
+                              <span className={`flex items-center gap-1 ${isOverdue ? "text-crit font-bold" : "text-muted"}`}>
+                                <Calendar className="w-3 h-3" /> {new Date(t.due_date).toLocaleDateString()} {isOverdue ? "(OVERDUE)" : ""}
                               </span>
                             )}
                           </div>
@@ -661,10 +836,10 @@ export default function CaseDetail() {
                       {canModify && (
                         <button
                           onClick={() => handleDeleteTask(t.id)}
-                          className="text-muted hover:text-crit text-[11px] font-mono transition"
+                          className="text-muted hover:text-crit text-[11px] font-mono transition p-1"
                           title="Delete Task"
                         >
-                          ✕
+                          <X className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </div>
@@ -720,7 +895,7 @@ export default function CaseDetail() {
                       <div className="flex items-center gap-2">
                         {c.is_ai_authored ? (
                           <span className="text-teal font-bold uppercase flex items-center gap-1 text-xs">
-                            🤖 AI Agent
+                            <Bot className="w-3.5 h-3.5 text-cyan" /> AI Agent
                           </span>
                         ) : (
                           <span className="text-teal font-bold">{c.author_name}</span>
@@ -741,10 +916,10 @@ export default function CaseDetail() {
                         {!c.is_ai_authored && (isSupervisor || c.author_user_id === currentUser?.id) && (
                           <button
                             onClick={() => handleDeleteComment(c.id)}
-                            className="hover:text-crit transition"
+                            className="hover:text-crit transition p-0.5"
                             title="Delete Comment"
                           >
-                            ✕
+                            <X className="w-3 h-3" />
                           </button>
                         )}
                       </div>
@@ -837,7 +1012,7 @@ export default function CaseDetail() {
             <div className="border border-line/60 rounded bg-panel2 p-3 mt-3">
               <div className="flex items-center justify-between">
                 <span className="text-muted font-mono text-[11px] uppercase flex items-center gap-1.5">
-                  🔒 Statutory Sensitive Fields (Religion / Caste)
+                  <Lock className="w-3.5 h-3.5 text-amber" /> Statutory Sensitive Fields (Religion / Caste)
                 </span>
                 {isAdmin ? (
                   <button
@@ -1001,16 +1176,16 @@ export default function CaseDetail() {
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-ink font-semibold">
+                      <span className="text-ink font-semibold flex items-center gap-1.5">
                         {sourceNode ? `${sourceNode.bank_name} (${sourceNode.account_number_masked})` : "Account"}
-                        {" ➔ "}
+                        <ArrowRight className="w-3 h-3 text-muted" />
                         {targetNode ? `${targetNode.bank_name} (${targetNode.account_number_masked})` : "Account"}
                       </span>
                       <span className="text-amber font-display text-sm">₹{tx.amount.toLocaleString()}</span>
                     </div>
                     {tx.flagged_reason && (
-                      <p className="text-crit font-mono text-[11px] mt-1">
-                        🚩 Flagged: {tx.flagged_reason}
+                      <p className="text-crit font-mono text-[11px] mt-1 flex items-center gap-1">
+                        <Flag className="w-3 h-3 text-crit" /> Flagged: {tx.flagged_reason}
                       </p>
                     )}
                   </div>
@@ -1069,9 +1244,9 @@ export default function CaseDetail() {
               <h3 className="font-display text-lg text-ink">Update Security Investigation Label</h3>
               <button
                 onClick={() => setShowLabelModal(false)}
-                className="text-muted hover:text-ink text-sm font-mono"
+                className="text-muted hover:text-ink text-sm font-mono p-1"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1090,16 +1265,16 @@ export default function CaseDetail() {
                       key={lbl}
                       type="button"
                       onClick={() => setNewLabel(lbl)}
-                      className={`p-3 rounded border text-xs font-mono font-semibold transition text-center ${
+                      className={`p-3 rounded border text-xs font-mono font-semibold transition text-center flex items-center justify-center gap-1.5 ${
                         newLabel === lbl
                           ? "bg-amber/20 border-amber text-amber shadow-lg"
                           : "bg-panel2 border-line text-muted hover:border-teal"
                       }`}
                     >
-                      {lbl === "Suspected" && "⚠️ "}
-                      {lbl === "Verified" && "✓ "}
-                      {lbl === "Needs Review" && "🔍 "}
-                      {lbl}
+                      {lbl === "Suspected" && <AlertTriangle className="w-3.5 h-3.5 text-amber" />}
+                      {lbl === "Verified" && <CheckCircle2 className="w-3.5 h-3.5 text-teal" />}
+                      {lbl === "Needs Review" && <Search className="w-3.5 h-3.5 text-cyan" />}
+                      <span>{lbl}</span>
                     </button>
                   ))}
                 </div>
@@ -1122,8 +1297,9 @@ export default function CaseDetail() {
               </div>
 
               {/* Mandatory Confirmation Step */}
-              <div className="bg-amber/10 border border-amber/30 rounded p-3 text-xs text-amber font-mono">
-                ⚠️ <strong>Confirmation Required:</strong> Submitting will record an immutable audit event in Activity History and update the official Security Case review status.
+              <div className="bg-amber/10 border border-amber/30 rounded p-3 text-xs text-amber font-mono flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber" />
+                <div><strong>Confirmation Required:</strong> Submitting will record an immutable audit event in Activity History and update the official Security Case review status.</div>
               </div>
             </div>
 
@@ -1148,17 +1324,179 @@ export default function CaseDetail() {
         </div>
       )}
 
+      {/* ── EDIT CASE DETAILS MODAL (ADMIN & ASSIGNED OFFICER ONLY) ── */}
+      <AnimatePresence>
+      {showEditCaseModal && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.96 }}
+            className="bg-panel border border-line rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 font-body my-8"
+          >
+            <div className="flex justify-between items-center border-b border-line pb-3">
+              <div>
+                <h3 className="font-display font-bold text-lg text-ink">Edit Case Intelligence Record</h3>
+                <p className="text-[11px] font-mono text-muted">Cleared for DGP Office and Assigned Officer only</p>
+              </div>
+              <button
+                onClick={() => setShowEditCaseModal(false)}
+                className="text-muted hover:text-ink text-sm font-mono p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {editCaseError && (
+              <div className="bg-crit/10 border border-crit/40 text-crit text-xs p-3 rounded font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <span>{editCaseError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveCaseDetails} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase mb-1">Case Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={editCaseForm.title}
+                  onChange={(e) => setEditCaseForm({ ...editCaseForm, title: e.target.value })}
+                  className="w-full bg-panel2 border border-line rounded p-2.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase mb-1">Crime Type *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editCaseForm.crime_type}
+                    onChange={(e) => setEditCaseForm({ ...editCaseForm, crime_type: e.target.value })}
+                    className="w-full bg-panel2 border border-line rounded p-2.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase mb-1">Severity *</label>
+                  <select
+                    value={editCaseForm.severity}
+                    onChange={(e) => setEditCaseForm({ ...editCaseForm, severity: e.target.value })}
+                    className="w-full bg-panel2 border border-line rounded p-2.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase mb-1">District *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editCaseForm.district}
+                    onChange={(e) => setEditCaseForm({ ...editCaseForm, district: e.target.value })}
+                    className="w-full bg-panel2 border border-line rounded p-2.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase mb-1">Status *</label>
+                  <select
+                    value={editCaseForm.status}
+                    onChange={(e) => setEditCaseForm({ ...editCaseForm, status: e.target.value })}
+                    className="w-full bg-panel2 border border-line rounded p-2.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                  >
+                    <option value="open">Open</option>
+                    <option value="investigating">Investigating</option>
+                    <option value="closed">Closed</option>
+                    <option value="court">In Court</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase mb-1">Police Station</label>
+                <input
+                  type="text"
+                  value={editCaseForm.station_name}
+                  onChange={(e) => setEditCaseForm({ ...editCaseForm, station_name: e.target.value })}
+                  className="w-full bg-panel2 border border-line rounded p-2.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase mb-1">Investigation Summary</label>
+                <textarea
+                  rows={3}
+                  value={editCaseForm.summary}
+                  onChange={(e) => setEditCaseForm({ ...editCaseForm, summary: e.target.value })}
+                  placeholder="Operational briefing and evidence updates..."
+                  className="w-full bg-panel2 border border-line rounded p-2.5 text-xs text-ink focus:outline-none focus:ring-1 focus:ring-teal"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-line">
+                <button
+                  type="button"
+                  onClick={() => setShowEditCaseModal(false)}
+                  className="px-4 py-2 rounded text-xs font-mono text-muted hover:text-ink transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editCaseSaving}
+                  className="bg-teal hover:bg-teal/90 text-base font-mono font-bold text-xs px-5 py-2.5 rounded-xl shadow transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {editCaseSaving ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Save Changes
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </motion.div>
+        </motion.div>
+      )}
+      </AnimatePresence>
+
       {/* ── EXPORT SECURITY CASE REPORT MODAL ── */}
+      <AnimatePresence>
       {showExportModal && (
-        <div className="fixed inset-0 bg-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-panel border border-line rounded-lg max-w-md w-full p-6 shadow-2xl space-y-4 font-body relative">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          className="fixed inset-0 bg-base/80 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+            className="bg-panel border border-line rounded-lg max-w-md w-full p-6 shadow-2xl space-y-4 font-body relative card-depth">
             <div className="flex justify-between items-center border-b border-line pb-3">
               <h3 className="font-display text-lg text-ink">Export Security Case Report</h3>
               <button
                 onClick={() => setShowExportModal(false)}
-                className="text-muted hover:text-ink text-sm font-mono"
+                className="text-muted hover:text-ink text-sm font-mono p-1"
               >
-                ✕
+                <X className="w-4 h-4" />
               </button>
             </div>
 
@@ -1182,11 +1520,14 @@ export default function CaseDetail() {
                   exportFormat === "pdf" ? "bg-amber/20 border-amber text-ink shadow" : "bg-panel2 border-line text-muted hover:border-teal"
                 }`}
               >
-                <div>
-                  <p className="text-xs font-mono font-bold text-ink">📄 PDF Document (.pdf)</p>
-                  <p className="text-[11px] text-muted font-body mt-0.5">ReportLab formatted official briefing report with tables and badges.</p>
+                <div className="flex items-center gap-2.5">
+                  <FileText className="w-4 h-4 text-teal" />
+                  <div>
+                    <p className="text-xs font-mono font-bold text-ink">PDF Document (.pdf)</p>
+                    <p className="text-[11px] text-muted font-body mt-0.5">Official briefing report with structured tables and clearance badges.</p>
+                  </div>
                 </div>
-                {exportFormat === "pdf" && <span className="text-amber font-mono font-bold text-sm">✓</span>}
+                {exportFormat === "pdf" && <CheckCircle2 className="w-4 h-4 text-amber" />}
               </button>
 
               <button
@@ -1196,11 +1537,14 @@ export default function CaseDetail() {
                   exportFormat === "html" ? "bg-amber/20 border-amber text-ink shadow" : "bg-panel2 border-line text-muted hover:border-teal"
                 }`}
               >
-                <div>
-                  <p className="text-xs font-mono font-bold text-ink">🌐 Printable Web HTML (.html)</p>
-                  <p className="text-[11px] text-muted font-body mt-0.5">Interactive printable web page with responsive CSS styling & badges.</p>
+                <div className="flex items-center gap-2.5">
+                  <Globe className="w-4 h-4 text-cyan" />
+                  <div>
+                    <p className="text-xs font-mono font-bold text-ink">Printable Web HTML (.html)</p>
+                    <p className="text-[11px] text-muted font-body mt-0.5">Interactive printable web document with responsive styling & badges.</p>
+                  </div>
                 </div>
-                {exportFormat === "html" && <span className="text-amber font-mono font-bold text-sm">✓</span>}
+                {exportFormat === "html" && <CheckCircle2 className="w-4 h-4 text-amber" />}
               </button>
 
               <button
@@ -1210,11 +1554,14 @@ export default function CaseDetail() {
                   exportFormat === "csv" ? "bg-amber/20 border-amber text-ink shadow" : "bg-panel2 border-line text-muted hover:border-teal"
                 }`}
               >
-                <div>
-                  <p className="text-xs font-mono font-bold text-ink">📊 Spreadsheet Data (.csv)</p>
-                  <p className="text-[11px] text-muted font-body mt-0.5">Structured CSV tables for Excel data analysis & auditing.</p>
+                <div className="flex items-center gap-2.5">
+                  <Table className="w-4 h-4 text-teal" />
+                  <div>
+                    <p className="text-xs font-mono font-bold text-ink">Spreadsheet Data (.csv)</p>
+                    <p className="text-[11px] text-muted font-body mt-0.5">Structured CSV data tables for institutional archiving & auditing.</p>
+                  </div>
                 </div>
-                {exportFormat === "csv" && <span className="text-amber font-mono font-bold text-sm">✓</span>}
+                {exportFormat === "csv" && <CheckCircle2 className="w-4 h-4 text-amber" />}
               </button>
             </div>
 
@@ -1234,18 +1581,19 @@ export default function CaseDetail() {
               >
                 {exporting ? (
                   <>
-                    <span className="animate-spin text-xs">⏳</span> Generating {exportFormat.toUpperCase()}...
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating {exportFormat.toUpperCase()}...
                   </>
                 ) : (
                   <>
-                    <span>⬇</span> Download {exportFormat.toUpperCase()}
+                    <Download className="w-3.5 h-3.5" /> Download {exportFormat.toUpperCase()}
                   </>
                 )}
               </button>
             </div>
-          </div>
-        </div>
+          </motion.div>
+        </motion.div>
       )}
+      </AnimatePresence>
     </div>
   );
 }
