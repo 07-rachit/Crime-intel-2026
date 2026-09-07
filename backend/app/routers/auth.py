@@ -58,12 +58,13 @@ def login(
     user = db.query(models.User).filter(models.User.email == email).first()
 
     # Auto-provision demo account if querying a default demo user and not found
-    if not user and email in ["admin@crimeintel.local", "analyst@crimeintel.local", "investigator@crimeintel.local", "viewer@crimeintel.local"]:
+    if not user and email in ["admin@crimeintel.local", "analyst@crimeintel.local", "investigator@crimeintel.local", "viewer@crimeintel.local", "yadav@crimeintel.local"]:
         role_map = {
             "admin@crimeintel.local": (models.RoleEnum.admin, "Admin User (DGP Office)", "user-admin-demo-001"),
             "analyst@crimeintel.local": (models.RoleEnum.analyst, "Lead Analyst Priya", "user-analyst-demo-001"),
             "investigator@crimeintel.local": (models.RoleEnum.investigator, "Inspector K. Sharma", "user-investigator-demo-001"),
             "viewer@crimeintel.local": (models.RoleEnum.viewer, "Junior Duty Officer", "user-viewer-demo-001"),
+            "yadav@crimeintel.local": (models.RoleEnum.investigator, "Officer Yadav", "user-yadav-001"),
         }
         role, name, demo_id = role_map[email]
         user = models.User(

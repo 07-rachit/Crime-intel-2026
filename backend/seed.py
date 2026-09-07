@@ -204,8 +204,14 @@ viewer_user = models.User(
     hashed_password=auth.hash_password("Viewer@123"),
     role=models.RoleEnum.viewer,
 )
+yadav_user = models.User(
+    name="Officer Yadav",
+    email="yadav@crimeintel.local",
+    hashed_password=auth.hash_password("rao@12345"),
+    role=models.RoleEnum.investigator,
+)
 
-db.add_all([admin_user, analyst_user, investigator_user, viewer_user])
+db.add_all([admin_user, analyst_user, investigator_user, viewer_user, yadav_user])
 db.commit()
 print("--> Seeded RBAC Users.")
 

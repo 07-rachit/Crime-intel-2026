@@ -92,19 +92,20 @@ def get_current_user(
         user = db.query(models.User).filter(models.User.email == email).first()
 
     # Auto-provision demo account if querying a default demo user and missing
-    if user is None and email in ["admin@crimeintel.local", "analyst@crimeintel.local", "investigator@crimeintel.local", "viewer@crimeintel.local"]:
+    if user is None and email in ["admin@crimeintel.local", "analyst@crimeintel.local", "investigator@crimeintel.local", "viewer@crimeintel.local", "yadav@crimeintel.local"]:
         role_map = {
-            "admin@crimeintel.local": (models.RoleEnum.admin, "Admin User (DGP Office)", "user-admin-demo-001"),
-            "analyst@crimeintel.local": (models.RoleEnum.analyst, "Lead Analyst Priya", "user-analyst-demo-001"),
-            "investigator@crimeintel.local": (models.RoleEnum.investigator, "Inspector K. Sharma", "user-investigator-demo-001"),
-            "viewer@crimeintel.local": (models.RoleEnum.viewer, "Junior Duty Officer", "user-viewer-demo-001"),
+            "admin@crimeintel.local": (models.RoleEnum.admin, "Admin User (DGP Office)", "user-admin-demo-001", "Admin@123"),
+            "analyst@crimeintel.local": (models.RoleEnum.analyst, "Lead Analyst Priya", "user-analyst-demo-001", "Analyst@123"),
+            "investigator@crimeintel.local": (models.RoleEnum.investigator, "Inspector K. Sharma", "user-investigator-demo-001", "Investigator@123"),
+            "viewer@crimeintel.local": (models.RoleEnum.viewer, "Junior Duty Officer", "user-viewer-demo-001", "Viewer@123"),
+            "yadav@crimeintel.local": (models.RoleEnum.investigator, "Officer Yadav", "user-yadav-001", "rao@12345"),
         }
-        role, name, demo_id = role_map[email]
+        role, name, demo_id, default_pwd = role_map[email]
         user = models.User(
             id=demo_id,
             name=name,
             email=email,
-            hashed_password=hash_password("Admin@123"),
+            hashed_password=hash_password(default_pwd),
             role=role,
         )
         db.add(user)

@@ -216,7 +216,7 @@ export default function Layout({ children }) {
       {/* ── Main Content Area ─────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <Header />
-        <main className="flex-1 flex flex-col min-h-0 overflow-y-auto custom-scrollbar">
+        <main className={`flex-1 flex flex-col min-h-0 ${["/assistant", "/map", "/network"].includes(location.pathname) ? "overflow-hidden" : "overflow-y-auto"} custom-scrollbar`}>
           <PageTransition>{children}</PageTransition>
         </main>
       </div>
