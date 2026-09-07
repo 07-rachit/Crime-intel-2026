@@ -35,7 +35,12 @@ function InviteModal({ onClose, onCreated }) {
       onCreated(user);
       onClose();
     } catch (err) {
-      setError(err?.response?.data?.detail || "Failed to create user.");
+      const errMsg =
+        err?.response?.data?.error?.message ||
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        "Failed to create user.";
+      setError(errMsg);
     } finally {
       setSaving(false);
     }

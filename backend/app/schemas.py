@@ -1,7 +1,8 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, EmailStr, field_validator, ConfigDict
+import re
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 
 
 from app.models import RoleEnum, CaseStatus, Severity
@@ -10,9 +11,17 @@ from app.models import RoleEnum, CaseStatus, Severity
 # ---------- Auth ----------
 class UserCreate(BaseModel):
     name: str
-    email: EmailStr
+    email: str
     password: str
     role: RoleEnum = RoleEnum.viewer
+
+    @field_validator("email")
+    @classmethod
+    def email_valid(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", v):
+            raise ValueError("Invalid email format")
+        return v
 
     @field_validator("name")
     @classmethod
@@ -80,8 +89,16 @@ class Token(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     password: str
+
+    @field_validator("email")
+    @classmethod
+    def email_valid(cls, v: str) -> str:
+        v = v.strip().lower()
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", v):
+            raise ValueError("Invalid email format")
+        return v
 
 
 # ---------- Case ----------

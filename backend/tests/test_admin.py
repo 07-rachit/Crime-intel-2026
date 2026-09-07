@@ -21,6 +21,19 @@ def test_admin_create_user(client, admin_headers):
     assert response.json()["role"] == "analyst"
 
 
+def test_admin_create_user_with_local_domain(client, admin_headers):
+    payload = {
+        "name": "IG Yadav",
+        "email": "yadav@crimeintel.local",
+        "password": "password123",
+        "role": "investigator",
+    }
+    response = client.post("/api/admin/users", json=payload, headers=admin_headers)
+    assert response.status_code == 201
+    assert response.json()["email"] == "yadav@crimeintel.local"
+    assert response.json()["role"] == "investigator"
+
+
 def test_admin_update_user_role(client, admin_headers, viewer_user):
     response = client.patch(
         f"/api/admin/users/{viewer_user.id}",

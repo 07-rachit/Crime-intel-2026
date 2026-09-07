@@ -60,6 +60,7 @@ async def request_validation_exception_handler(request: Request, exc: RequestVal
     log = get_logger(req_id)
     
     details = []
+    messages = []
     for err in exc.errors():
         loc = " -> ".join([str(x) for x in err.get("loc", [])])
         msg = err.get("msg", "Invalid value")
@@ -68,9 +69,12 @@ async def request_validation_exception_handler(request: Request, exc: RequestVal
             "message": msg,
             "type": err.get("type", "value_error"),
         })
+        field_name = str(err.get("loc", [])[-1]) if err.get("loc") else "field"
+        messages.append(f"{field_name}: {msg}")
 
+    error_summary = "; ".join(messages) if messages else "Payload schema validation failed"
     log.info(f"VALIDATION_ERROR [422] on {request.url.path}: {sanitize_data(details)}")
-    val_err = ValidationError(message="Payload schema validation failed", details=details)
+    val_err = ValidationError(message=error_summary, details=details)
     return JSONResponse(status_code=val_err.status_code, content=val_err.to_dict(req_id))
 
 
